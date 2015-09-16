@@ -1,8 +1,8 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Account move CSV import module for OpenERP
-#    Copyright (C) 2012-2014 Akretion (http://www.akretion.com)
+#    Account move CSV import module for Odoo
+#    Copyright (C) 2012-2015 Akretion (http://www.akretion.com)
 #    @author Alexis de Lattre <alexis.delattre@akretion.com>
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -55,5 +55,4 @@ This module has been written by Alexis de Lattre from Akretion (alexis.delattre@
         'wizard/import_move_view.xml',
     ],
     'installable': True,
-    'active': False,
 }

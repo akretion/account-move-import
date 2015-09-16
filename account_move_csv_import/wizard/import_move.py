@@ -1,8 +1,8 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Account move CSV import module for OpenERP
-#    Copyright (C) 2012-2014 Akretion (http://www.akretion.com)
+#    Account move CSV import module for Odoo
+#    Copyright (C) 2012-2015 Akretion (http://www.akretion.com)
 #    @author Alexis de Lattre <alexis.delattre@akretion.com>
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -167,7 +167,6 @@ class account_move_import(orm.TransientModel):
         for line in cutstr:
             # This should only be the case for the last line
             # TODO find why and fix
-            print "line=", line
             if not line:
                 continue
             line_dict = {}
@@ -201,7 +200,6 @@ class account_move_import(orm.TransientModel):
                 # On the last real move line, we decrement 'work_amount_cents'
                 # of the amount of the analytic line
                 last_move_line['work_amount_cents'] -= ana_amount_cents
-                print "APPEND ANA line_dict=", line_dict
                 move_tmp.append(line_dict)
             elif (
                     setup.get('move_lines_start_with')
@@ -209,7 +207,6 @@ class account_move_import(orm.TransientModel):
                     setup.get('move_lines_start_with')):
 
                 line = line.strip()
-                print "line=", line
                 raw_account = self._extract_field(
                     cr, uid, setup, line, 'account', context=context)
                 if raw_account.isdigit():
