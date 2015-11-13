@@ -20,6 +20,7 @@
                 <field name="post_move" />
                 <field name="force_journal_id" />
                 <field name="force_move_ref" />
+                <field name="force_move_date" />
             </group>
             <group name="info-csv" string="Info About Generic CSV Format">
                 <label colspan="2" string="Cols : Date (DD/MM/YYYY), Journal code,"/>

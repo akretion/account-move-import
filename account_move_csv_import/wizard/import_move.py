@@ -20,8 +20,8 @@
 #
 ##############################################################################
 
-from openerp.osv import orm, fields
-from openerp.tools.translate import _
+from openerp import models, fields, api, _
+from openerp.exceptions import Warning as UserError
 from datetime import datetime
 import unicodecsv
 import base64
@@ -32,7 +32,7 @@ from copy import deepcopy
 _logger = logging.getLogger(__name__)
 
 
-class account_move_import(orm.TransientModel):
+class AccountMoveImport(models.TransientModel):
     _name = "account.move.import"
     _description = "Import account move from CSV file"
 
@@ -49,8 +49,7 @@ class account_move_import(orm.TransientModel):
             return self.run_import_quadra(
                 cr, uid, import_data, context=context)
         else:
-            raise orm.except_orm(
-                _('Error :'),
+            raise UserError(
                 _("You must select a file format."))
 
     def run_import_genericcsv(self, cr, uid, import_data, context=None):
@@ -74,19 +73,24 @@ class account_move_import(orm.TransientModel):
         return action
 
     def run_import_meilleuregestion(self, cr, uid, import_data, context=None):
+        # Prisme
         setup = {
             'encoding': 'latin1',
             'delimiter': ';',
             'quoting': unicodecsv.QUOTE_NONE,
             'fieldnames': [
-                'trash1', 'trash2', 'trash3', 'trash4', 'trash5', 'account',
-                'date', 'trash6', 'analytic', 'trash7', 'trash8', 'trash9',
-                'journal', 'label', 'label2', 'sign', 'amount', 'debit',
-                'credit',
+                'trasha', 'trashb', 'journal', 'trashd', 'trashe',
+                'trashf', 'trashg', 'date', 'trashi', 'trashj', 'trashk',
+                'trashl', 'trashm', 'trashn', 'account', 'trashp',
+                'trashq', 'amount', 'trashs', 'sign', 'trashu',
+                'trashv', 'label',
+                'trashx', 'trashy', 'trashz', 'trashaa', 'trashab',
+                'trashac', 'trashad', 'trashae', 'analytic',
                 ],
-            'date_format': '%d/%m/%Y',
-            'top_lines_to_skip': 4,
-            'bottom_lines_to_skip': 3,
+            'date_format': '%y%m%d',
+            'top_lines_to_skip': 1,
+            'bottom_lines_to_skip': 0,
+            'decimal_separator': 'coma',
         }
         account_move_dict = self.parse_csv(
             cr, uid, import_data, setup, context=context)
@@ -129,6 +133,7 @@ class account_move_import(orm.TransientModel):
         setup['post_move'] = import_data.post_move
         setup['force_journal_id'] = import_data.force_journal_id.id or False
         setup['force_move_ref'] = import_data.force_move_ref or False
+        setup['force_move_date'] = import_data.force_move_date or False
         fullstr = base64.decodestring(import_data.file_to_import)
         if setup.get('bottom_lines_to_skip'):
             end_seq = -(setup.get('bottom_lines_to_skip') + 1)
@@ -284,7 +289,7 @@ class account_move_import(orm.TransientModel):
         setup['tempfile'] = fileobj
         fileobj.write(cutstr)
         fileobj.seek(0)  # We must start reading from the beginning !
-        reader = unicodecsv.reader(
+        reader = unicodecsv.DictReader(
             fileobj,
             fieldnames=setup.get('fieldnames'),
             delimiter=setup.get('delimiter'),
@@ -313,20 +318,19 @@ class account_move_import(orm.TransientModel):
             line_csv += 1
             _logger.debug('[line %d] Content : %s' % (line_csv, row))
             # Date and journal are read from the first line
-            if not move_dict['date_datetime']:
+            if setup.get('date_format') and not move_dict['date_datetime']:
                 move_dict['date_datetime'] = datetime.strptime(
                     row['date'], setup.get('date_format'))
-            if not move_dict['journal']:
+            if row.get('journal') and not move_dict['journal']:
                 move_dict['journal'] = row['journal']
             if not move_dict['ref']:
                 move_dict['ref'] = row['label']
 
-            if row['analytic']:
+            if row.get('analytic'):
                 analytic_search = self.pool['account.analytic.account'].search(
                     cr, uid, [('code', '=', row['analytic'])], context=context)
                 if len(analytic_search) != 1:
-                    raise orm.except_orm(
-                        _('Error :'),
+                    raise UserError(
                         _("No match for analytic account code '%s' (line %d "
                             "of the CSV file)")
                         % (row['analytic'], line_csv))
@@ -336,32 +340,43 @@ class account_move_import(orm.TransientModel):
             account_search = self.pool['account.account'].search(
                 cr, uid, [('code', '=', row['account'])], context=context)
             if len(account_search) != 1:
-                raise orm.except_orm(
-                    _('Error:'),
+                raise UserError(
                     _("No match for legal account code '%s' (line %d of "
                         "the CSV file)")
                     % (row['account'], line_csv))
             account_id = account_search[0]
             try:
-                if row['debit']:
-                    debit = float(row['debit'])
+                debit = credit = 0
+                if row.get('sign'):
+                    if setup.get('decimal_separator') == 'coma':
+                        amount = float(row['amount'].replace(',', '.'))
+                    else:
+                        amount = float(row['amount'])
+                    if row['sign'].strip() == 'D':
+                        debit = amount
+                    else:
+                        credit = amount
                 else:
-                    debit = 0
-                if row['credit']:
-                    credit = float(row['credit'])
-                else:
-                    credit = 0
+                    debit = row['debit']
+                    credit = row['credit']
+                    if debit:
+                        if setup.get('decimal_separator') == 'coma':
+                            debit = debit.replace(',', '.')
+                        debit = float(debit)
+                    if credit:
+                        if setup.get('decimal_separator') == 'coma':
+                            credit = credit.replace(',', '.')
+                        credit = float(credit)
             except:
-                raise orm.except_orm(
-                    _('Error:'),
-                    _("Check that the decimal separator for the 'Debit' and "
-                        "'Credit' columns is a dot"))
+                raise UserError(_(
+                    "Check the configuration of the decimal separator "
+                    "in the code for this file format import and compare it "
+                    "to the 'Debit' and 'Credit' columns."))
             # If debit and credit = 0, we skip the move line
             if not debit and not credit:
                 _logger.debug(
                     '[line %d] Skipped because debit=credit=0' % line_csv)
                 continue
-
             line_dict = {
                 'account_id': account_id,
                 'name': row['label'],
@@ -387,8 +402,11 @@ class account_move_import(orm.TransientModel):
             setup.get('tempfile').close()
 
         for move_to_create in moves_to_create:
-            date_str = datetime.strftime(
-                move_to_create['date_datetime'], '%Y-%m-%d')
+            if setup.get('force_move_date'):
+                date_str = setup.get('force_move_date')
+            else:
+                date_str = datetime.strftime(
+                    move_to_create['date_datetime'], '%Y-%m-%d')
             # If the user has forced a journal, we take it
             # otherwize, we take the journal of the CSV file
             if setup.get('force_journal_id'):
@@ -398,18 +416,17 @@ class account_move_import(orm.TransientModel):
                     cr, uid, [('code', '=', move_to_create['journal'])],
                     context=context)
                 if len(journal_search) != 1:
-                    raise orm.except_orm(
-                        _('Error:'),
+                    raise UserError(
                         _("No match for journal code '%s'")
                         % move_to_create['journal'])
                 journal_id = journal_search[0]
+
 
             # Select period
             period_search = self.pool['account.period'].find(
                 cr, uid, date_str, context=context)
             if len(period_search) != 1:
-                raise orm.except_orm(
-                    _('Error :'),
+                raise UserError(
                     _("No matching period for date '%s'") % date_str)
             period_id = period_search[0]
 
@@ -421,7 +438,7 @@ class account_move_import(orm.TransientModel):
                 'ref': setup.get('force_move_ref') or move_to_create['ref'],
                 'line_id': move_to_create['lines'],
                 }, context=context)
-            _logger.debug(
+            _logger.info(
                 'Account move ID %d created with %d move lines'
                 % (move_id, len(move_to_create['lines'])))
             move_ids_created.append(move_id)
@@ -455,22 +472,21 @@ class account_move_import(orm.TransientModel):
                 })
         return action
 
-    _columns = {
-        'file_to_import': fields.binary(
-            'File to Import', required=True,
-            help="CSV file containing the account move to import."),
-        'file_format': fields.selection([
-            ('meilleuregestion', 'MeilleureGestion'),
-            ('genericcsv', 'Generic CSV'),
-            ('quadra', 'Quadra'),
-            ], 'File Format', required=True,
-            help="Select the type of file you are importing."),
-        'post_move': fields.boolean(
-            'Validate the Account Move',
-            help="If True, the account move will be posted after the import."),
-        'force_journal_id': fields.many2one(
-            'account.journal', string="Force Journal",
-            help="Journal in which the account move will be created, "
-            "even if the CSV file indicate another journal."),
-        'force_move_ref': fields.char('Force Move Reference'),
-    }
+    file_to_import = fields.Binary(
+        string='File to Import', required=True,
+        help="CSV file containing the account move to import.")
+    file_format = fields.Selection([
+        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
+        ('genericcsv', 'Generic CSV'),
+        ('quadra', 'Quadra'),
+        ], string='File Format', required=True,
+        help="Select the type of file you are importing.")
+    post_move = fields.Boolean(
+        string='Validate the Account Move',
+        help="If True, the account move will be posted after the import.")
+    force_journal_id = fields.Many2one(
+        'account.journal', string="Force Journal",
+        help="Journal in which the account move will be created, "
+        "even if the CSV file indicate another journal.")
+    force_move_ref = fields.Char('Force Move Reference')
+    force_move_date = fields.Date('Force Move Date')
