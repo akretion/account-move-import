@@ -13,7 +13,7 @@
     <field name="model">account.move.import</field>
     <field name="arch" type="xml">
         <form string="Import Account Move">
-            <group name="main" string="Import Account Move via CSV or TXT File">
+            <group name="main" string="Import Account Move File">
                 <field name="file_to_import" />
                 <field name="file_format" />
                 <field name="post_move" />
@@ -22,17 +22,26 @@
                 <field name="force_move_ref" />
                 <field name="force_move_line_name"/>
             </group>
-            <group name="info-csv" string="Info About Generic CSV Format">
-                <label colspan="2" string="Cols : Date (DD/MM/YYYY), Journal code,"/>
-                <label colspan="2" string="Legal account, Analytic account, Label, Debit,"/>
-                <label colspan="2" string="Credit" />
-                <label colspan="2" string="Encoding : UTF-8" />
-                <label colspan="2" string="Field separator : , (coma)" />
-                <label colspan="2" string="Text separator : &quot; (quote)" />
-                <label colspan="2" string="Decimal separator : . (dot)"/>
-                <label colspan="2" string="If exporting from LibreOffice, set Language to" />
-                <label colspan="2" string="English on numeric cells." />
-            </group>
+            <div name="info-csv">
+                <h2>Information about the Generic CSV format</h2>
+                <ul>
+                    <li><em>Columns</em>:
+                        <ol><li>Date (DD/MM/YYYY)</li>
+                        <li>Journal code</li>
+                        <li>Legal account</li>
+                        <li>Analytic account</li>
+                        <li>Label</li>
+                        <li>Debit</li>
+                        <li>Credit</li>
+                        </ol></li>
+                    <li><em>Encoding</em>: UTF-8</li>
+                    <li><em>Field separator</em>: , (coma)</li>
+                    <li><em>Text separator</em>: &quot; (quote)</li>
+                    <li><em>Decimal separator</em>: . (dot)</li>
+                    </ul>
+                    <p>If exporting from LibreOffice, set Language to
+                        English on numeric cells.</p>
+            </div>
             <footer>
                 <button name="run_import" type="object" string="Run Import" class="oe_highlight" />
                 <button special="cancel" string="Cancel" class="oe_link"/>
@@ -42,7 +51,7 @@
 </record>
 
 <record id="account_move_import_action" model="ir.actions.act_window">
-    <field name="name">Import CSV Account Move</field>
+    <field name="name">Import Account Move</field>
     <field name="res_model">account.move.import</field>
     <field name="view_mode">form</field>
     <field name="target">new</field>
