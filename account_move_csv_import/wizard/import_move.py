@@ -22,9 +22,10 @@ class AccountMoveImport(models.TransientModel):
         string='File to Import', required=True,
         help="File containing the journal entry(ies) to import.")
     file_format = fields.Selection([
-        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
         ('genericcsv', 'Generic CSV'),
-        ('quadra', 'Quadra'),
+        # TODO port to v10
+        # ('meilleuregestion', 'MeilleureGestion (Prisme)'),
+        # ('quadra', 'Quadra'),
         ('extenso', 'In Extenso'),
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
