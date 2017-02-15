@@ -1,27 +1,10 @@
-# -*- encoding: utf-8 -*-
-##############################################################################
-#
-#    Account move CSV import module for Odoo
-#    Copyright (C) 2012-2015 Akretion (http://www.akretion.com)
-#    @author Alexis de Lattre <alexis.delattre@akretion.com>
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-##############################################################################
+# -*- coding: utf-8 -*-
+# © 2012-2017 Akretion (http://www.akretion.com)
+# @author Alexis de Lattre <alexis.delattre@akretion.com>
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from openerp import models, fields, api, _
-from openerp.exceptions import Warning as UserError
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 from datetime import datetime
 import unicodecsv
 import base64
@@ -29,28 +12,140 @@ from tempfile import TemporaryFile
 import logging
 from copy import deepcopy
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AccountMoveImport(models.TransientModel):
     _name = "account.move.import"
     _description = "Import account move from CSV file"
 
-    def run_import(self, cr, uid, ids, context=None):
-        import_data = self.browse(cr, uid, ids[0], context=context)
-        file_format = import_data.file_format
+    file_to_import = fields.Binary(
+        string='File to Import', required=True,
+        help="File containing the journal entry(ies) to import.")
+    file_format = fields.Selection([
+        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
+        ('genericcsv', 'Generic CSV'),
+        ('quadra', 'Quadra'),
+        ('extenso', 'In Extenso'),
+        ], string='File Format', required=True,
+        help="Select the type of file you are importing.")
+    post_move = fields.Boolean(
+        string='Validate the Journal Entry',
+        help="If True, the journal entry will be posted after the import.")
+    force_journal_id = fields.Many2one(
+        'account.journal', string="Force Journal",
+        help="Journal in which the journal entry will be created, "
+        "even if the file indicate another journal.")
+    force_move_ref = fields.Char('Force Journal Entry Reference')
+    force_move_line_name = fields.Char('Force Journal Items Label')
+    force_move_date = fields.Date('Force Journal Entry Date')
+
+    # PIVOT FORMAT
+    # [{
+    #    'account': {'code': '411000'},
+    #    'partner': {'ref': '1242'}, # you can many more keys to match partners
+    #    'name': u'label',  # required
+    #    'credit': 12.42,
+    #    'debit': 0,
+    #    'ref': '9804',  # optional
+    #    'journal': {'code': 'VT'},
+    #    'date': '2017-02-15',  # also accepted in datetime format
+    #    'line': 2,  # Line number for error messages.
+                     # Must be the line number including headers
+    # },
+    #  2nd line...
+    #  3rd line...
+    # ]
+
+    def run_import(self):
+        self.ensure_one()
+        file_format = self.file_format
+        fileobj = TemporaryFile('w+')
+        print "file_to_import=", self.file_to_import
+        fileobj.write(self.file_to_import.decode('base64'))
+        fileobj.seek(0)  # We must start reading from the beginning !
         if file_format == 'meilleuregestion':
-            return self.run_import_meilleuregestion(
-                cr, uid, import_data, context=context)
+            pivot = self.run_import_meilleuregestion()
         elif file_format == 'genericcsv':
-            return self.run_import_genericcsv(
-                cr, uid, import_data, context=context)
+            pivot = self.run_import_genericcsv()
         elif file_format == 'quadra':
-            return self.run_import_quadra(
-                cr, uid, import_data, context=context)
+            pivot = self.run_import_quadra()
+        elif file_format == 'extenso':
+            pivot = self.run_import_extenso(fileobj)
         else:
-            raise UserError(
-                _("You must select a file format."))
+            raise UserError(_("You must select a file format."))
+        fileobj.close()
+        logger.debug('pivot before update: %s', pivot)
+        self.update_pivot(pivot)
+        moves = self.create_moves_from_pivot(pivot, post=self.post_move)
+        action = {
+            'name': _('Imported Journal Entries'),
+            'res_model': 'account.move',
+            'type': 'ir.actions.act_window',
+            'nodestroy': False,
+            'target': 'current',
+            }
+
+        if len(moves) == 1:
+            action.update({
+                'view_mode': 'form,tree',
+                'res_id': moves[0].id,
+                })
+        else:
+            action.update({
+                'view_mode': 'tree,form',
+                'domain': [('id', 'in', moves.ids)],
+                })
+        return action
+
+    def update_pivot(self, pivot):
+        force_move_date = self.force_move_date
+        force_move_ref = self.force_move_ref
+        force_move_line_name = self.force_move_line_name
+        force_journal = self.force_journal_id or False
+        for l in pivot:
+            if force_move_date:
+                l['date'] = force_move_date
+            if force_move_line_name:
+                l['name'] = force_move_line_name
+            if force_move_ref:
+                l['ref'] = force_move_ref
+            if force_journal:
+                l['journal'] = {'recordset': force_journal}
+            if isinstance(l.get('date'), datetime):
+                l['date'] = fields.Date.to_string(l['date'])
+
+    def run_import_extenso(self, fileobj):
+        fieldnames = [
+            'journal', 'date', False, 'account', False, False, False, False,
+            'debit', 'credit']
+        reader = unicodecsv.DictReader(
+            fileobj,
+            fieldnames=fieldnames,
+            delimiter='\t',
+            quoting=False,
+            encoding='utf-8',
+            )
+        res = []
+        i = 0
+        for l in reader:
+            print "l=", l
+            i += 1
+            l['credit'] = l['credit'] or '0'
+            l['debit'] = l['debit'] or '0'
+            vals = {
+                'journal': {'code': l['journal']},
+                'account': {'code': l['account']},
+                'credit': float(l['credit'].replace(',', '.')),
+                'debit': float(l['debit'].replace(',', '.')),
+                'date': datetime.strptime(l['date'], '%d%m%Y'),
+                'line': i,
+            }
+            res.append(vals)
+        from pprint import pprint
+        pprint(res)
+        return res
+
 
     def run_import_genericcsv(self, cr, uid, import_data, context=None):
         setup = {
@@ -451,42 +546,99 @@ class AccountMoveImport(models.TransientModel):
                 cr, uid, move_ids_created, context=context)
             _logger.debug('Account move ID %s posted' % move_ids_created)
 
-        action = {
-            'name': _('Account Move'),
-            'res_model': 'account.move',
-            'type': 'ir.actions.act_window',
-            'nodestroy': False,
-            'target': 'current',
-            'context': context,
+
+    def create_moves_from_pivot(self, pivot, post=False):
+        logger.debug('Final pivot: %s', pivot)
+        bdio = self.env['business.document.import']
+        amo = self.env['account.move']
+        acc_speed_dict = bdio._prepare_account_speed_dict()
+        journal_speed_dict = bdio._prepare_journal_speed_dict()
+        chatter_msg = []
+        # TODO: add line nr in error msg sent by base_business_doc
+        # MATCH what needs to be matched... + CHECKS
+        for l in pivot:
+            assert l.get('line'), 'missing line number'
+            if l.get('partner'):
+                partner = bdio._match_partner(
+                    l['partner'], chatter_msg, partner_type='any')
+                l['partner_id'] = partner.id
+            else:
+                l['partner_id'] = False
+            account = bdio._match_account(
+                l['account'], chatter_msg, acc_speed_dict)
+            l['account_id'] = account.id
+            journal = bdio._match_journal(
+                l['journal'], chatter_msg, journal_speed_dict)
+            l['journal_id'] = journal.id
+            if not l.get('name'):
+                raise UserError(_(
+                    'Line %d: missing label.') % l['line'])
+            if not l.get('date'):
+                raise UserError(_(
+                    'Line %d: missing date.') % l['line'])
+            if not isinstance(l.get('credit'), float):
+                raise UserError(_(
+                    'Line %d: bad value for credit (%s).')
+                    % (l['line'], l['credit']))
+            if not isinstance(l.get('debit'), float):
+                raise UserError(_(
+                    'Line %d: bad value for debit (%s).')
+                    % (l['line'], l['debit']))
+            # test that they don't have both a value
+        # EXTRACT MOVES
+        moves = []
+        cur_journal_id = False
+        cur_ref = False
+        cur_date = False
+        cur_balance = 0.0
+        prec = self.env.user.company_id.currency_id.rounding
+        cur_move = {}
+        for l in pivot:
+            ref = l.get('ref', False)
+            cur_balance += l['credit'] - l['debit']
+            if (
+                    cur_ref == ref and
+                    cur_journal_id == l['journal_id'] and
+                    cur_date == l['date'] and
+                    not float_is_zero(cur_balance, precision_rounding=prec)):
+                # append to current move
+                cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
+            else:
+                # new move
+                if not float_is_zero(cur_balance, precision_rounding=prec):
+                    raise UserError(_(
+                        "The journal entry that ends on line %d is not "
+                        "balanced (balance is %s.") % (l['line'] - 1, cur_balance))
+                if cur_move:
+                    assert len(cur_move['line_ids']) < 2, 'move should have more than 1 line'
+                    moves.append(cur_move)
+                # TODO  add _prepare
+                cur_move = self._prepare_move(l)
+                cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l))]
+        if not float_is_zero(cur_balance, precision_rounding=prec):
+            raise UserError(_(
+                "The journal entry that ends on the last line is not "
+                "balanced (balance is %s.") % cur_balance)
+        rmoves = self.env['account.move']
+        for move in moves:
+            rmoves += amo.create(move)
+        if post:
+            rmoves.post()
+        return rmoves
+
+    def _prepare_move(self, pivot_line):
+        vals = {
+            'journal_id': l['journal_id'],
+            'ref': l.get('ref'),
+            'date': l['date'],
             }
+        return vals
 
-        if len(move_ids_created) == 1:
-            action.update({
-                'view_mode': 'form,tree',
-                'res_id': move_ids_created[0],
-                })
-        else:
-            action.update({
-                'view_mode': 'tree,form',
-                'domain': [('id', 'in', move_ids_created)],
-                })
-        return action
-
-    file_to_import = fields.Binary(
-        string='File to Import', required=True,
-        help="CSV file containing the account move to import.")
-    file_format = fields.Selection([
-        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
-        ('genericcsv', 'Generic CSV'),
-        ('quadra', 'Quadra'),
-        ], string='File Format', required=True,
-        help="Select the type of file you are importing.")
-    post_move = fields.Boolean(
-        string='Validate the Account Move',
-        help="If True, the account move will be posted after the import.")
-    force_journal_id = fields.Many2one(
-        'account.journal', string="Force Journal",
-        help="Journal in which the account move will be created, "
-        "even if the CSV file indicate another journal.")
-    force_move_ref = fields.Char('Force Move Reference')
-    force_move_date = fields.Date('Force Move Date')
+    def _prepare_move_line(self, pivot_line):
+        vals = {
+            'credit': pivot_line['credit'],
+            'debit': pivot_line['debit'],
+            'name': pivot_line['name'],
+            'partner_id': pivot_line['partner_id'],
+            }
+        return vals
