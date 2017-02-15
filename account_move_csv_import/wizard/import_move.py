@@ -42,6 +42,7 @@ class AccountMoveImport(models.TransientModel):
     # PIVOT FORMAT
     # [{
     #    'account': {'code': '411000'},
+    #    'analytic': {'code': 'ADM'},
     #    'partner': {'ref': '1242'}, # you can many more keys to match partners
     #    'name': u'label',  # required
     #    'credit': 12.42,
@@ -160,7 +161,7 @@ class AccountMoveImport(models.TransientModel):
         i = 0
         for l in reader:
             i += 1
-            res.append({
+            vals = {
                 'journal': {'code': l['journal']},
                 'account': {'code': l['account']},
                 'credit': float(l['credit'] or 0),
@@ -168,7 +169,10 @@ class AccountMoveImport(models.TransientModel):
                 'date': datetime.strptime(l['date'], '%d/%m/%Y'),
                 'name': l['name'],
                 'line': i,
-                })
+                }
+            if l['analytic']:
+                vals['analytic'] = {'code': l['analytic']}
+            res.append(vals)
         return res
 
     def meilleuregestion2pivot(self, fileobj):
@@ -226,21 +230,25 @@ class AccountMoveImport(models.TransientModel):
         bdio = self.env['business.document.import']
         amo = self.env['account.move']
         acc_speed_dict = bdio._prepare_account_speed_dict()
+        aacc_speed_dict = bdio._prepare_analytic_account_speed_dict()
         journal_speed_dict = bdio._prepare_journal_speed_dict()
         chatter_msg = []
         # TODO: add line nr in error msg sent by base_business_doc
         # MATCH what needs to be matched... + CHECKS
         for l in pivot:
             assert l.get('line'), 'missing line number'
-            if l.get('partner'):
-                partner = bdio._match_partner(
-                    l['partner'], chatter_msg, partner_type='any')
-                l['partner_id'] = partner.id
-            else:
-                l['partner_id'] = False
             account = bdio._match_account(
                 l['account'], chatter_msg, acc_speed_dict)
             l['account_id'] = account.id
+            if l.get('partner'):
+                partner = bdio._match_partner(
+                    l['partner'], chatter_msg,
+                    domain=[('parent_id', '=', False)])
+                l['partner_id'] = partner.commercial_partner_id.id
+            if l.get('analytic'):
+                analytic = bdio._match_analytic_account(
+                    l['analytic'], chatter_msg, aacc_speed_dict)
+                l['analytic_account_id'] = analytic.id
             journal = bdio._match_journal(
                 l['journal'], chatter_msg, journal_speed_dict)
             l['journal_id'] = journal.id
@@ -322,7 +330,8 @@ class AccountMoveImport(models.TransientModel):
             'credit': pivot_line['credit'],
             'debit': pivot_line['debit'],
             'name': pivot_line['name'],
-            'partner_id': pivot_line['partner_id'],
+            'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
+            'analytic_account_id': pivot_line.get('analytic_account_id'),
             }
         return vals
