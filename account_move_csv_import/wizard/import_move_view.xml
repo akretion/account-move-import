@@ -13,7 +13,7 @@
     <field name="model">account.move.import</field>
     <field name="arch" type="xml">
         <form string="Import Account Move">
-            <group name="main" string="Import Account Move File">
+            <group name="main">
                 <field name="file_to_import" />
                 <field name="file_format" />
                 <field name="post_move" />

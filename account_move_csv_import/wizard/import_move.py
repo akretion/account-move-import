@@ -29,15 +29,15 @@ class AccountMoveImport(models.TransientModel):
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
     post_move = fields.Boolean(
-        string='Validate the Journal Entry',
+        string='Post Journal Entry',
         help="If True, the journal entry will be posted after the import.")
     force_journal_id = fields.Many2one(
         'account.journal', string="Force Journal",
         help="Journal in which the journal entry will be created, "
         "even if the file indicate another journal.")
-    force_move_ref = fields.Char('Force Journal Entry Reference')
-    force_move_line_name = fields.Char('Force Journal Items Label')
-    force_move_date = fields.Date('Force Journal Entry Date')
+    force_move_ref = fields.Char('Force Reference')
+    force_move_line_name = fields.Char('Force Label')
+    force_move_date = fields.Date('Force Date')
 
     # PIVOT FORMAT
     # [{
