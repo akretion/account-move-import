@@ -58,22 +58,25 @@ class AccountMoveImport(models.TransientModel):
     #  3rd line...
     # ]
 
+    def file2pivot(self, fileobj):
+        file_format = self.file_format
+        if file_format == 'meilleuregestion':
+            return self.meilleuregestion2pivot(fileobj)
+        elif file_format == 'genericcsv':
+            return self.genericcsv2pivot(fileobj)
+        elif file_format == 'quadra':
+            return self.quadra2pivot(fileobj)
+        elif file_format == 'extenso':
+            return self.extenso2pivot(fileobj)
+        else:
+            raise UserError(_("You must select a file format."))
+
     def run_import(self):
         self.ensure_one()
-        file_format = self.file_format
         fileobj = TemporaryFile('w+')
         fileobj.write(self.file_to_import.decode('base64'))
         fileobj.seek(0)  # We must start reading from the beginning !
-        if file_format == 'meilleuregestion':
-            pivot = self.meilleuregestion2pivot(fileobj)
-        elif file_format == 'genericcsv':
-            pivot = self.genericcsv2pivot(fileobj)
-        elif file_format == 'quadra':
-            pivot = self.quadra2pivot(fileobj)
-        elif file_format == 'extenso':
-            pivot = self.extenso2pivot(fileobj)
-        else:
-            raise UserError(_("You must select a file format."))
+        pivot = self.file2pivot(fileobj)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
@@ -243,8 +246,7 @@ class AccountMoveImport(models.TransientModel):
             l['account_id'] = account.id
             if l.get('partner'):
                 partner = bdio._match_partner(
-                    l['partner'], chatter_msg,
-                    domain=[('parent_id', '=', False)])
+                    l['partner'], chatter_msg, partner_type=False)
                 l['partner_id'] = partner.commercial_partner_id.id
             if l.get('analytic'):
                 analytic = bdio._match_analytic_account(
