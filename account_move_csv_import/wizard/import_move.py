@@ -3,9 +3,9 @@
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import models, fields, _
-from odoo.exceptions import UserError
-from odoo.tools import float_is_zero
+from openerp import models, fields, api, _
+from openerp.exceptions import Warning as UserError
+from openerp.tools import float_is_zero
 from datetime import datetime
 import unicodecsv
 from tempfile import TemporaryFile
@@ -23,9 +23,8 @@ class AccountMoveImport(models.TransientModel):
         help="File containing the journal entry(ies) to import.")
     file_format = fields.Selection([
         ('genericcsv', 'Generic CSV'),
-        # TODO port to v10
-        # ('meilleuregestion', 'MeilleureGestion (Prisme)'),
-        # ('quadra', 'Quadra'),
+        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
+        ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
@@ -58,25 +57,27 @@ class AccountMoveImport(models.TransientModel):
     #  3rd line...
     # ]
 
-    def file2pivot(self, fileobj):
+    def file2pivot(self, fileobj, filestr):
         file_format = self.file_format
         if file_format == 'meilleuregestion':
             return self.meilleuregestion2pivot(fileobj)
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(fileobj)
         elif file_format == 'quadra':
-            return self.quadra2pivot(fileobj)
+            return self.quadra2pivot(filestr)
         elif file_format == 'extenso':
             return self.extenso2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
+    @api.multi
     def run_import(self):
         self.ensure_one()
         fileobj = TemporaryFile('w+')
-        fileobj.write(self.file_to_import.decode('base64'))
+        filestr = self.file_to_import.decode('base64')
+        fileobj.write(filestr)
         fileobj.seek(0)  # We must start reading from the beginning !
-        pivot = self.file2pivot(fileobj)
+        pivot = self.file2pivot(fileobj, filestr)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
@@ -101,6 +102,7 @@ class AccountMoveImport(models.TransientModel):
                 })
         return action
 
+    @api.multi
     def update_pivot(self, pivot):
         force_move_date = self.force_move_date
         force_move_ref = self.force_move_ref
@@ -180,53 +182,63 @@ class AccountMoveImport(models.TransientModel):
         return res
 
     def meilleuregestion2pivot(self, fileobj):
-        # Prisme
-        setup = {
-            'encoding': 'latin1',
-            'delimiter': ';',
-            'quoting': unicodecsv.QUOTE_NONE,
-            'fieldnames': [
-                'trasha', 'trashb', 'journal', 'trashd', 'trashe',
-                'trashf', 'trashg', 'date', 'trashi', 'trashj', 'trashk',
-                'trashl', 'trashm', 'trashn', 'account', 'trashp',
-                'trashq', 'amount', 'trashs', 'sign', 'trashu',
-                'trashv', 'label',
-                'trashx', 'trashy', 'trashz', 'trashaa', 'trashab',
-                'trashac', 'trashad', 'trashae', 'analytic',
-                ],
-            'date_format': '%y%m%d',
-            'top_lines_to_skip': 1,
-            'bottom_lines_to_skip': 0,
-            'decimal_separator': 'coma',
-        }
-        res = []  # TODO
+        fieldnames = [
+            'trasha', 'trashb', 'journal', 'trashd', 'trashe',
+            'trashf', 'trashg', 'date', 'trashi', 'trashj', 'trashk',
+            'trashl', 'trashm', 'trashn', 'account', 'trashp',
+            'trashq', 'amount', 'trashs', 'sign', 'trashu',
+            'trashv', 'name',
+            'trashx', 'trashy', 'trashz', 'trashaa', 'trashab',
+            'trashac', 'trashad', 'trashae', 'analytic']
+        reader = unicodecsv.DictReader(
+            fileobj,
+            fieldnames=fieldnames,
+            delimiter=';',
+            quoting=False,
+            encoding='latin1')
+        res = []
+        i = 0
+        for l in reader:
+            i += 1
+            if i == 1:
+                continue
+            amount = float(l['amount'].replace(',', '.'))
+            credit = l['sign'] == 'C' and amount or False
+            debit = l['sign'] == 'D' and amount or False
+            ana = l.get('analytic') and {'code': l.get('analytic')} or False
+            vals = {
+                'journal': {'code': l['journal']},
+                'account': {'code': l['account']},
+                'analytic': ana,
+                'credit': credit,
+                'debit': debit,
+                'date': datetime.strptime(l['date'], '%y%m%d'),
+                'name': l['name'],
+                'line': i,
+            }
+            res.append(vals)
         return res
 
-    def quadra2pivot(self, fileobj):
-        setup = {
-            'encoding': 'ibm850',
-            'date_format': '%d%m%y',
-            'top_lines_to_skip': 0,
-            'bottom_lines_to_skip': 0,
-            'move_lines_start_with': 'M',
-            'analytic_lines_start_with': 'I',
-            'field_positions': {
-                # Indicate position of first char and position of last char
-                # First position is 0
-                'account': [1, 8],
-                'amount_cents': [42, 54],  # amount_cents = amount x 100
-                'date': [14, 19],
-                'journal': [9, 10],
-                'label': [21, 40],
-                # 'label': [116, 147],
-                'sign': [41, 41],
-                },
-            'analytic_field_positions': {
-                'account': [19, 23],
-                'amount_cents': [6, 18],
-                },
-            }
+    def quadra2pivot(self, filestr):
+        i = 0
         res = []
+        for l in filestr.split('\n'):
+            i += 1
+            if len(l) < 54:
+                continue
+            if l[0] == 'M' and l[41] in ('C', 'D'):
+                amount_cents = int(l[42:55])
+                amount = amount_cents / 100.0
+                vals = {
+                    'journal': {'code': l[9:11]},
+                    'account': {'code': l[1:9]},
+                    'credit': l[41] == 'C' and amount or False,
+                    'debit': l[41] == 'D' and amount or False,
+                    'date': datetime.strptime(l[14:20], '%d%m%y'),
+                    'name': l[21:41],
+                    'line': i,
+                }
+                res.append(vals)
         return res
 
     def create_moves_from_pivot(self, pivot, post=False):
@@ -237,22 +249,24 @@ class AccountMoveImport(models.TransientModel):
         aacc_speed_dict = bdio._prepare_analytic_account_speed_dict()
         journal_speed_dict = bdio._prepare_journal_speed_dict()
         chatter_msg = []
-        # TODO: add line nr in error msg sent by base_business_doc
         # MATCH what needs to be matched... + CHECKS
         for l in pivot:
-            assert l.get('line'), 'missing line number'
-            account = bdio._match_account(
+            assert l.get('line') and isinstance(l.get('line'), int),\
+                'missing line number'
+            error_prefix = _('Line %d:') % l['line']
+            bdiop = bdio.with_context(error_prefix=error_prefix)
+            account = bdiop._match_account(
                 l['account'], chatter_msg, acc_speed_dict)
             l['account_id'] = account.id
             if l.get('partner'):
-                partner = bdio._match_partner(
+                partner = bdiop._match_partner(
                     l['partner'], chatter_msg, partner_type=False)
                 l['partner_id'] = partner.commercial_partner_id.id
             if l.get('analytic'):
-                analytic = bdio._match_analytic_account(
+                analytic = bdiop._match_analytic_account(
                     l['analytic'], chatter_msg, aacc_speed_dict)
                 l['analytic_account_id'] = analytic.id
-            journal = bdio._match_journal(
+            journal = bdiop._match_journal(
                 l['journal'], chatter_msg, journal_speed_dict)
             l['journal_id'] = journal.id
             if not l.get('name'):
@@ -286,7 +300,7 @@ class AccountMoveImport(models.TransientModel):
                     cur_date == l['date'] and
                     not float_is_zero(cur_balance, precision_rounding=prec)):
                 # append to current move
-                cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
+                cur_move['line_id'].append((0, 0, self._prepare_move_line(l)))
             else:
                 # new move
                 if moves and not float_is_zero(
@@ -296,11 +310,11 @@ class AccountMoveImport(models.TransientModel):
                         "balanced (balance is %s).")
                         % (l['line'] - 1, cur_balance))
                 if cur_move:
-                    assert len(cur_move['line_ids']) > 1,\
+                    assert len(cur_move['line_id']) > 1,\
                         'move should have more than 1 line'
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
-                cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l))]
+                cur_move['line_id'] = [(0, 0, self._prepare_move_line(l))]
                 cur_date = l['date']
                 cur_ref = ref
                 cur_journal_id = l['journal_id']
@@ -321,8 +335,10 @@ class AccountMoveImport(models.TransientModel):
         return rmoves
 
     def _prepare_move(self, pivot_line):
+        period_id = self.env['account.period'].find(pivot_line['date'])[0].id
         vals = {
             'journal_id': pivot_line['journal_id'],
+            'period_id': period_id,
             'ref': pivot_line.get('ref'),
             'date': pivot_line['date'],
             }
