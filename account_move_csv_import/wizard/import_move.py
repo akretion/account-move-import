@@ -43,7 +43,8 @@ class AccountMoveImport(models.TransientModel):
     # [{
     #    'account': {'code': '411000'},
     #    'analytic': {'code': 'ADM'},
-    #    'partner': {'ref': '1242'}, # you can many more keys to match partners
+    #    'partner': {'ref': '1242'},
+    #               # you can use many more keys to match partners
     #    'name': u'label',  # required
     #    'credit': 12.42,
     #    'debit': 0,
@@ -152,7 +153,7 @@ class AccountMoveImport(models.TransientModel):
     def genericcsv2pivot(self, fileobj):
         # Prisme
         fieldnames = [
-            'date', 'journal', 'account',
+            'date', 'journal', 'account', 'partner',
             'analytic', 'name', 'debit', 'credit',
             ]
         reader = unicodecsv.DictReader(
@@ -177,6 +178,8 @@ class AccountMoveImport(models.TransientModel):
                 }
             if l['analytic']:
                 vals['analytic'] = {'code': l['analytic']}
+            if l['partner']:
+                vals['partner'] = {'ref': l['partner']}
             res.append(vals)
         return res
 
