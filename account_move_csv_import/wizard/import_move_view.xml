@@ -32,6 +32,7 @@
                         <ol><li>Date (DD/MM/YYYY)</li>
                         <li>Journal code</li>
                         <li>Legal account</li>
+                        <li>Partner internal reference</li>
                         <li>Analytic account</li>
                         <li>Label</li>
                         <li>Debit</li>
