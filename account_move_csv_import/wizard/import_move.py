@@ -13,6 +13,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+try:
+    import xlrd
+except ImportError:
+    logger.debug('Cannot import xlrd')
+
 
 class AccountMoveImport(models.TransientModel):
     _name = "account.move.import"
@@ -26,6 +31,7 @@ class AccountMoveImport(models.TransientModel):
         ('meilleuregestion', 'MeilleureGestion (Prisme)'),
         ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
+        ('payfit', 'Payfit'),
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
     post_move = fields.Boolean(
@@ -38,6 +44,21 @@ class AccountMoveImport(models.TransientModel):
     force_move_ref = fields.Char('Force Reference')
     force_move_line_name = fields.Char('Force Label')
     force_move_date = fields.Date('Force Date')
+    # technical fields
+    force_move_date_required = fields.Boolean('Force Date Required')
+    force_move_line_name_required = fields.Boolean('Force Label Required')
+    force_journal_required = fields.Boolean('Force Journal Required')
+
+    @api.onchange('file_format')
+    def file_format_change(self):
+        if self.file_format == 'payfit':
+            self.force_move_date_required = True
+            self.force_move_line_name_required = True
+            self.force_journal_required = True
+        else:
+            self.force_move_date_required = False
+            self.force_move_line_name_required = False
+            self.force_journal_required = False
 
     # PIVOT FORMAT
     # [{
@@ -67,6 +88,8 @@ class AccountMoveImport(models.TransientModel):
             return self.quadra2pivot(filestr)
         elif file_format == 'extenso':
             return self.extenso2pivot(fileobj)
+        elif file_format == 'payfit':
+            return self.payfit2pivot(filestr)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -239,6 +262,39 @@ class AccountMoveImport(models.TransientModel):
                     'line': i,
                 }
                 res.append(vals)
+        return res
+
+    def payfit2pivot(self, filestr):
+        wb = xlrd.open_workbook(file_contents=filestr)
+        sh1 = wb.sheet_by_index(1)
+        i = 0
+        res = []
+        name = u'Paye'
+        for rownum in range(sh1.nrows):
+            row = sh1.row_values(rownum)
+            i += 1
+            if i == 1:
+                continue
+            if not row[0]:
+                continue
+            account = unicode(row[0])
+            if '.' in account:
+                account = account.split('.')[0]
+            if not account[0].isdigit():
+                continue
+            analytic = unicode(row[3])
+            vals = {
+                'account': {'code': account},
+                'name': name,
+                'debit': float(row[5] or 0.0),
+                'credit': float(row[6] or 0.0),
+                'line': i,
+            }
+            if analytic:
+                vals['analytic'] = {'code': analytic}
+            res.append(vals)
+        from pprint import pprint
+        pprint(res)
         return res
 
     def create_moves_from_pivot(self, pivot, post=False):

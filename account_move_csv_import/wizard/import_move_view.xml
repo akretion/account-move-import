@@ -18,10 +18,13 @@
                 <field name="file_to_import" />
                 <field name="file_format" />
                 <field name="post_move" />
-                <field name="force_journal_id" />
-                <field name="force_move_date" />
+                <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
+                <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
                 <field name="force_move_ref" />
-                <field name="force_move_line_name"/>
+                <field name="force_move_line_name" attrs="{'required': [('force_move_line_name_required', '=', True)]}"/>
+                <field name="force_journal_required" invisible="1"/>
+                <field name="force_move_date_required" invisible="1"/>
+                <field name="force_move_line_name_required" invisible="1"/>
             </group>
             <div name="info-csv">
                 <h2>Information about the Generic CSV format</h2>
