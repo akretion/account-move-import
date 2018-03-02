@@ -30,6 +30,7 @@ class AccountMoveImport(models.TransientModel):
         ('meilleuregestion', 'MeilleureGestion (Prisme)'),
         ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
+        ('cielpaye', 'Ciel Paye'),
         ('payfit', 'Payfit'),
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
@@ -90,6 +91,8 @@ class AccountMoveImport(models.TransientModel):
             return self.extenso2pivot(fileobj)
         elif file_format == 'payfit':
             return self.payfit2pivot(filestr)
+        elif file_format == 'cielpaye':
+            return self.cielpaye2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -170,6 +173,35 @@ class AccountMoveImport(models.TransientModel):
                 'line': i,
             }
             res.append(vals)
+        return res
+
+    def cielpaye2pivot(self, fileobj):
+        fieldnames = [
+            False, 'journal', 'date', 'account', False, 'amount', 'sign',
+            False, 'name', False]
+        reader = unicodecsv.DictReader(
+            fileobj,
+            fieldnames=fieldnames,
+            delimiter='\t',
+            quoting=unicodecsv.QUOTE_MINIMAL,
+            encoding='utf-8')
+        res = []
+        i = 0
+        for l in reader:
+            i += 1
+            # skip non-move lines
+            if l.get('date') and l.get('name') and l.get('amount'):
+                amount = float(l['amount'].replace(',', '.'))
+                vals = {
+                    'journal': {'code': l['journal']},
+                    'account': {'code': l['account']},
+                    'credit': l['sign'] == 'C' and amount or 0,
+                    'debit': l['sign'] == 'D' and amount or 0,
+                    'date': datetime.strptime(l['date'], '%d/%m/%Y'),
+                    'name': l['name'],
+                    'line': i,
+                }
+                res.append(vals)
         return res
 
     def genericcsv2pivot(self, fileobj):
