@@ -30,12 +30,15 @@ class AccountMoveImport(models.TransientModel):
         ('meilleuregestion', 'MeilleureGestion (Prisme)'),
         ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
+        ('fec_txt', 'FEC (text)'),
         ('payfit', 'Payfit'),
         ], string='File Format', required=True,
         help="Select the type of file you are importing.")
     post_move = fields.Boolean(
         string='Post Journal Entry',
         help="If True, the journal entry will be posted after the import.")
+    file_with_header = fields.Boolean(
+        help="Indicate if file contain a headers or not.")
     force_journal_id = fields.Many2one(
         'account.journal', string="Force Journal",
         help="Journal in which the journal entry will be created, "
@@ -71,6 +74,8 @@ class AccountMoveImport(models.TransientModel):
     #    'ref': '9804',  # optional
     #    'journal': {'code': 'VT'},
     #    'date': '2017-02-15',  # also accepted in datetime format
+    #    'reconcile_ref': 'A1242',  # will be written in import_reconcile
+    #                               # and be processed after move line creation
     #    'line': 2,  # Line number for error messages.
     #                # Must be the line number including headers
     # },
@@ -78,18 +83,26 @@ class AccountMoveImport(models.TransientModel):
     #  3rd line...
     # ]
 
-    def file2pivot(self, fileobj, filestr):
+    def file2pivot(self, fileobj, filestr, file_with_header=False):
         file_format = self.file_format
         if file_format == 'meilleuregestion':
-            return self.meilleuregestion2pivot(fileobj)
+            return self.meilleuregestion2pivot(
+                fileobj, file_with_header=file_with_header)
         elif file_format == 'genericcsv':
-            return self.genericcsv2pivot(fileobj)
+            return self.genericcsv2pivot(
+                fileobj, file_with_header=file_with_header)
         elif file_format == 'quadra':
-            return self.quadra2pivot(filestr)
+            return self.quadra2pivot(
+                fileobj, file_with_header=file_with_header)
         elif file_format == 'extenso':
-            return self.extenso2pivot(fileobj)
+            return self.extenso2pivot(
+                fileobj, file_with_header=file_with_header)
         elif file_format == 'payfit':
-            return self.payfit2pivot(filestr)
+            return self.payfit2pivot(
+                fileobj, file_with_header=file_with_header)
+        elif file_format == 'fec_txt':
+            return self.fectxt2pivot(
+                fileobj, file_with_header=file_with_header)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -99,11 +112,13 @@ class AccountMoveImport(models.TransientModel):
         filestr = self.file_to_import.decode('base64')
         fileobj.write(filestr)
         fileobj.seek(0)  # We must start reading from the beginning !
-        pivot = self.file2pivot(fileobj, filestr)
+        pivot = self.file2pivot(fileobj, filestr,
+            file_with_header=self.file_with_header)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
         moves = self.create_moves_from_pivot(pivot, post=self.post_move)
+        self.reconcile_move_lines(moves)
         action = {
             'name': _('Imported Journal Entries'),
             'res_model': 'account.move',
@@ -145,7 +160,7 @@ class AccountMoveImport(models.TransientModel):
             if not l['debit']:
                 l['debit'] = 0.0
 
-    def extenso2pivot(self, fileobj):
+    def extenso2pivot(self, fileobj, file_with_header=False):
         fieldnames = [
             'journal', 'date', False, 'account', False, False, False, False,
             'debit', 'credit']
@@ -159,6 +174,8 @@ class AccountMoveImport(models.TransientModel):
         i = 0
         for l in reader:
             i += 1
+            if i == 1 and file_with_header:
+                continue
             l['credit'] = l['credit'] or '0'
             l['debit'] = l['debit'] or '0'
             vals = {
@@ -172,7 +189,41 @@ class AccountMoveImport(models.TransientModel):
             res.append(vals)
         return res
 
-    def genericcsv2pivot(self, fileobj):
+    def fectxt2pivot(self, fileobj, file_with_header=False):
+        fieldnames = [
+            'journal', False, False, 'date', 'account_ebp', 'name',
+            False, False,  # CompAuxNum|CompAuxLib
+            'ref', False, 'name', 'debit', 'credit',
+            'reconcile_ref', False, False, False, False]
+        reader = unicodecsv.DictReader(
+            fileobj,
+            fieldnames=fieldnames,
+            delimiter='\t',
+            quoting=False,
+            encoding='utf-8')
+        res = []
+        i = 0
+        for l in reader:
+            i += 1
+            if i == 1 and file_with_header:
+                continue
+            l['credit'] = l['credit'] or '0'
+            l['debit'] = l['debit'] or '0'
+            vals = {
+                'journal': {'code': l['journal']},
+                'account': {'code': l['account']},
+                #    'partner': {'ref': '1242'},
+                'credit': float(l['credit'].replace(',', '.')),
+                'debit': float(l['debit'].replace(',', '.')),
+                'date': datetime.strptime(l['date'], '%d%m%Y'),
+                'name': l['name'],
+                'narration': l['reconcile_ref'],
+                'line': i,
+            }
+            res.append(vals)
+        return res
+
+    def genericcsv2pivot(self, fileobj, file_with_header=False):
         # Prisme
         fieldnames = [
             'date', 'journal', 'account', 'partner',
@@ -189,6 +240,8 @@ class AccountMoveImport(models.TransientModel):
         i = 0
         for l in reader:
             i += 1
+            if i == 1 and file_with_header:
+                continue
             vals = {
                 'journal': {'code': l['journal']},
                 'account': {'code': l['account']},
@@ -405,5 +458,61 @@ class AccountMoveImport(models.TransientModel):
             'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
             'analytic_account_id': pivot_line.get('analytic_account_id'),
+            'import_reconcile': pivot_line.get('reconcile_ref'),
             }
         return vals
+
+    def reconcile_move_lines(self, moves):
+        prec = self.env.user.company_id.currency_id.rounding
+        logger.info('Start to reconcile imported moves')
+        lines = self.env['account.move.line'].search([
+            ('move_id', 'in', moves.ids),
+            ('narration', '!=', False),
+            ])
+        torec = {}  # key = reconcile mark, value = movelines_recordset
+        for line in lines:
+            if line.narration in torec:
+                torec[line.narration] += line
+            else:
+                torec[line.narration] = line
+        for rec_ref, lines_to_rec in torec.iteritems():
+            if len(lines_to_rec) < 2:
+                logger.warning(
+                    "Skip reconcile of ref '%s' because "
+                    "this ref is only on 1 move line", rec_ref)
+                continue
+            total = 0.0
+            accounts = {}
+            partners = {}
+            for line in lines_to_rec:
+                total += line.credit
+                total -= line.debit
+                accounts[line.account_id] = True
+                partners[line.partner_id.id or False] = True
+            if not float_is_zero(total, precision_digits=prec):
+                logger.warning(
+                    "Skip reconcile of ref '%s' because the lines with "
+                    "this ref are not balanced (%s)", rec_ref, total)
+                continue
+            if len(accounts) > 1:
+                logger.warning(
+                    "Skip reconcile of ref '%s' because the lines with "
+                    "this ref have different accounts (%s)",
+                    rec_ref, ', '.join([acc.code for acc in accounts.keys()]))
+                continue
+            if not accounts.keys()[0].reconcile:
+                logger.warning(
+                    "Skip reconcile of ref '%s' because the account '%s' "
+                    "is not configured with 'Allow Reconciliation'",
+                    rec_ref, accounts.keys()[0].display_name)
+                continue
+            if len(partners) > 1:
+                logger.warning(
+                    "Skip reconcile of ref '%s' because the lines with "
+                    "this ref have different partners (IDs %s)",
+                    rec_ref, ', '.join(partners.keys()))
+                continue
+            lines_to_rec.reconcile()
+            print "reconcile mark created"
+        logger.info('Reconcile imported moves finished')
+        lines_to_rec.write({'narration': False})
