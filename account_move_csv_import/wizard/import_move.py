@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-# © 2012-2017 Akretion (http://www.akretion.com)
+# © 2012-2018 Akretion (http://www.akretion.com)
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
+# @author Mourad EL HADJ MIMOUNE <mourad.elhadj.mimoune@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import models, fields, api, _
@@ -37,8 +38,24 @@ class AccountMoveImport(models.TransientModel):
     post_move = fields.Boolean(
         string='Post Journal Entry',
         help="If True, the journal entry will be posted after the import.")
+    date_format = fields.Char(
+        default='%d/%m/%Y',
+        required=True,
+        help='Date format is applicable only on Generic csv file ex "%d%m%Y"')
+    move_ref_unique = fields.Boolean(
+        string='Is move ref unique ?',
+        help="If True, ref is used to detect new move in file.")
+    date_by_move_line = fields.Boolean(
+        string='Is date by move line ?',
+        help="If True, we dont't use date to detecte the lines"
+        "of account move. In odoo date are on account move.")
     file_with_header = fields.Boolean(
         help="Indicate if file contain a headers or not.")
+    create_missing_partner = fields.Boolean(
+        help='If True, for all messing partner we will create a new partner.'
+        ' All this partner containt this text "Create by import move" in note'
+        '(comment field). To complete them you can filtre partners by this'
+        ' note text.')
     force_journal_id = fields.Many2one(
         'account.journal', string="Force Journal",
         help="Journal in which the journal entry will be created, "
@@ -90,7 +107,8 @@ class AccountMoveImport(models.TransientModel):
                 fileobj, file_with_header=file_with_header)
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(
-                fileobj, file_with_header=file_with_header)
+                fileobj, file_with_header=file_with_header,
+                date_format=self.date_format)
         elif file_format == 'quadra':
             return self.quadra2pivot(
                 fileobj, file_with_header=file_with_header)
@@ -117,7 +135,10 @@ class AccountMoveImport(models.TransientModel):
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
-        moves = self.create_moves_from_pivot(pivot, post=self.post_move)
+        moves = self.create_moves_from_pivot(
+            pivot, post=self.post_move, move_ref_unique=self.move_ref_unique,
+            date_by_move_line=self.date_by_move_line,
+            create_missing_partner=self.create_missing_partner)
         self.reconcile_move_lines(moves)
         action = {
             'name': _('Imported Journal Entries'),
@@ -217,18 +238,19 @@ class AccountMoveImport(models.TransientModel):
                 'debit': float(l['debit'].replace(',', '.')),
                 'date': datetime.strptime(l['date'], '%d%m%Y'),
                 'name': l['name'],
-                'narration': l['reconcile_ref'],
+                'reconcile_ref': l['reconcile_ref'],
                 'line': i,
             }
             res.append(vals)
         return res
 
-    def genericcsv2pivot(self, fileobj, file_with_header=False):
+    def genericcsv2pivot(self, fileobj, file_with_header=False,
+        date_format='%d/%m/%Y'):
         # Prisme
         fieldnames = [
             'date', 'journal', 'account', 'partner',
-            'analytic', 'name', 'debit', 'credit',
-            ]
+            'ref', 'name', 'debit', 'credit', 'reconcile_ref', 'analytic'
+        ]
         reader = unicodecsv.DictReader(
             fileobj,
             fieldnames=fieldnames,
@@ -238,23 +260,31 @@ class AccountMoveImport(models.TransientModel):
             encoding='utf-8')
         res = []
         i = 0
-        for l in reader:
+        for ln in reader:
             i += 1
             if i == 1 and file_with_header:
                 continue
+            date_str = ln['date']
+            # to avoid bug complete date if format id ddmmyy ex 
+            # 10118 ==> 010118 (for 01/01/2018)
+            import pdb; pdb.set_trace()
+            if date_format == '%d%m%y' and\
+                    len(ln['date']) == 5:
+                date_str = '0' + date_str
             vals = {
-                'journal': {'code': l['journal']},
-                'account': {'code': l['account']},
-                'credit': float(l['credit'] or 0),
-                'debit': float(l['debit'] or 0),
-                'date': datetime.strptime(l['date'], '%d/%m/%Y'),
-                'name': l['name'],
+                'journal': {'code': ln['journal']},
+                'account': {'code': ln['account']},
+                'credit': float(ln['credit'].replace(',', '.') or 0),
+                'debit': float(ln['debit'].replace(',', '.') or 0),
+                'date': datetime.strptime(date_str, date_format),
+                'name': ln['name'],
+                'reconcile_ref': ln['reconcile_ref'],
                 'line': i,
-                }
-            if l['analytic']:
-                vals['analytic'] = {'code': l['analytic']}
-            if l['partner']:
-                vals['partner'] = {'ref': l['partner']}
+            }
+            if ln['analytic']:
+                vals['analytic'] = {'code': ln['analytic']}
+            if ln['partner']:
+                vals['partner'] = {'ref': ln['partner']}
             res.append(vals)
         return res
 
@@ -349,48 +379,74 @@ class AccountMoveImport(models.TransientModel):
             res.append(vals)
         return res
 
-    def create_moves_from_pivot(self, pivot, post=False):
+    def create_moves_from_pivot(
+        self, pivot, post=False, move_ref_unique=False,
+            date_by_move_line=False, create_missing_partner=False):
         logger.debug('Final pivot: %s', pivot)
         bdio = self.env['business.document.import']
         amo = self.env['account.move']
+        part_obj = self.env['res.partner']
         acc_speed_dict = bdio._prepare_account_speed_dict()
         aacc_speed_dict = bdio._prepare_analytic_account_speed_dict()
         journal_speed_dict = bdio._prepare_journal_speed_dict()
         chatter_msg = []
         # MATCH what needs to be matched... + CHECKS
-        for l in pivot:
-            assert l.get('line') and isinstance(l.get('line'), int),\
+        for ln in pivot:
+            assert ln.get('line') and isinstance(ln.get('line'), int),\
                 'missing line number'
-            error_prefix = _('Line %d:') % l['line']
+            error_prefix = _('Line %d:') % ln['line']
             bdiop = bdio.with_context(error_prefix=error_prefix)
             account = bdiop._match_account(
-                l['account'], chatter_msg, acc_speed_dict)
-            l['account_id'] = account.id
-            if l.get('partner'):
-                partner = bdiop._match_partner(
-                    l['partner'], chatter_msg, partner_type=False)
-                l['partner_id'] = partner.commercial_partner_id.id
-            if l.get('analytic'):
+                ln['account'], chatter_msg, acc_speed_dict)
+            ln['account_id'] = account.id
+            if ln.get('partner'):
+                partner = False
+                try:
+                    partner = bdiop._match_partner(
+                        ln['partner'], chatter_msg, partner_type=False)
+                except Exception as e:
+                    # import pdb; pdb.set_trace()
+                    # logger.info(e[0])
+                    if create_missing_partner:
+                        pass
+                    else:
+                        raise e
+                if create_missing_partner and not partner:
+                    import pdb; pdb.set_trace()
+                    name_field = 'name'
+                    # fix bug if module partner_firstname is installed
+                    if 'firstname' in part_obj._fields:
+                        name_field = 'firstname'
+                    partner = part_obj.create({
+                        name_field: ln['partner']['ref'],
+                        'ref': ln['partner']['ref'],
+                        'comment': 'Create by import move',
+                        'is_company': True,
+                    })
+                    logger.info(
+                        ">>>>>>>>>>>>: ajout new partner %s" % ln['partner'])
+                ln['partner_id'] = partner.commercial_partner_id.id
+            if ln.get('analytic'):
                 analytic = bdiop._match_analytic_account(
-                    l['analytic'], chatter_msg, aacc_speed_dict)
-                l['analytic_account_id'] = analytic.id
+                    ln['analytic'], chatter_msg, aacc_speed_dict)
+                ln['analytic_account_id'] = analytic.id
             journal = bdiop._match_journal(
-                l['journal'], chatter_msg, journal_speed_dict)
-            l['journal_id'] = journal.id
-            if not l.get('name'):
+                ln['journal'], chatter_msg, journal_speed_dict)
+            ln['journal_id'] = journal.id
+            if not ln.get('name'):
                 raise UserError(_(
-                    'Line %d: missing label.') % l['line'])
-            if not l.get('date'):
+                    'Line %d: missing label.') % ln['line'])
+            if not ln.get('date'):
                 raise UserError(_(
-                    'Line %d: missing date.') % l['line'])
-            if not isinstance(l.get('credit'), float):
+                    'Line %d: missing date.') % ln['line'])
+            if not isinstance(ln.get('credit'), float):
                 raise UserError(_(
                     'Line %d: bad value for credit (%s).')
-                    % (l['line'], l['credit']))
-            if not isinstance(l.get('debit'), float):
+                    % (ln['line'], ln['credit']))
+            if not isinstance(ln.get('debit'), float):
                 raise UserError(_(
                     'Line %d: bad value for debit (%s).')
-                    % (l['line'], l['debit']))
+                    % (ln['line'], ln['debit']))
             # test that they don't have both a value
         # EXTRACT MOVES
         moves = []
@@ -400,15 +456,21 @@ class AccountMoveImport(models.TransientModel):
         cur_balance = 0.0
         prec = self.env.user.company_id.currency_id.rounding
         cur_move = {}
-        for l in pivot:
-            ref = l.get('ref', False)
-            if (
-                    cur_ref == ref and
-                    cur_journal_id == l['journal_id'] and
-                    cur_date == l['date'] and
-                    not float_is_zero(cur_balance, precision_rounding=prec)):
+        for ln in pivot:
+            ref = ln.get('ref', False)
+            detect_new_move = True
+            if move_ref_unique:
+                detect_new_move = (cur_ref == ref)
+            if not date_by_move_line:
+                detect_new_move = detect_new_move and\
+                    (cur_date == ln['date'])
+            detect_new_move = detect_new_move and (
+                cur_journal_id == ln['journal_id']) and\
+                not float_is_zero(cur_balance, precision_rounding=prec)
+            if (detect_new_move):
                 # append to current move
-                cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
+                cur_move['line_ids'].append(
+                    (0, 0, self._prepare_move_line(ln)))
             else:
                 # new move
                 if moves and not float_is_zero(
@@ -416,17 +478,19 @@ class AccountMoveImport(models.TransientModel):
                     raise UserError(_(
                         "The journal entry that ends on line %d is not "
                         "balanced (balance is %s).")
-                        % (l['line'] - 1, cur_balance))
+                        % (ln['line'] - 1, cur_balance))
                 if cur_move:
-                    assert len(cur_move['line_ids']) > 1,\
-                        'move should have more than 1 line'
+                    if len(cur_move['line_ids']) <= 1:
+                        raise UserError(_(
+                            "move should have more than 1 line num: %s,"
+                            "data : %s") % (ln['line'], cur_move['line_ids']))
                     moves.append(cur_move)
-                cur_move = self._prepare_move(l)
-                cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l))]
-                cur_date = l['date']
+                cur_move = self._prepare_move(ln)
+                cur_move['line_ids'] = [(0, 0, self._prepare_move_line(ln))]
+                cur_date = ln['date']
                 cur_ref = ref
-                cur_journal_id = l['journal_id']
-            cur_balance += l['credit'] - l['debit']
+                cur_journal_id = ln['journal_id']
+            cur_balance += ln['credit'] - ln['debit']
         if cur_move:
             moves.append(cur_move)
         if not float_is_zero(cur_balance, precision_rounding=prec):
@@ -435,7 +499,8 @@ class AccountMoveImport(models.TransientModel):
                 "balanced (balance is %s).") % cur_balance)
         rmoves = self.env['account.move']
         for move in moves:
-            rmoves += amo.create(move)
+            rmoves |= amo.create(move)
+
         logger.info(
             'Account moves IDs %s created via file import' % rmoves.ids)
         if post:
@@ -458,7 +523,7 @@ class AccountMoveImport(models.TransientModel):
             'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
             'analytic_account_id': pivot_line.get('analytic_account_id'),
-            'import_reconcile': pivot_line.get('reconcile_ref'),
+            'import_reconcile': pivot_line.get('reconcile_ref') or False,
             }
         return vals
 
@@ -467,14 +532,14 @@ class AccountMoveImport(models.TransientModel):
         logger.info('Start to reconcile imported moves')
         lines = self.env['account.move.line'].search([
             ('move_id', 'in', moves.ids),
-            ('narration', '!=', False),
+            ('import_reconcile', '!=', False),
             ])
         torec = {}  # key = reconcile mark, value = movelines_recordset
         for line in lines:
-            if line.narration in torec:
-                torec[line.narration] += line
+            if line.import_reconcile in torec:
+                torec[line.import_reconcile] += line
             else:
-                torec[line.narration] = line
+                torec[line.import_reconcile] = line
         for rec_ref, lines_to_rec in torec.iteritems():
             if len(lines_to_rec) < 2:
                 logger.warning(
@@ -508,11 +573,11 @@ class AccountMoveImport(models.TransientModel):
                 continue
             if len(partners) > 1:
                 logger.warning(
-                    "Skip reconcile of ref '%s' because the lines with "
-                    "this ref have different partners (IDs %s)",
-                    rec_ref, ', '.join(partners.keys()))
+                "Skip reconcile of ref '%s' because the lines with "
+                "this ref have different partners (IDs %s)",
+                rec_ref, ', '.join([str(key) for key in partners.keys()]))
                 continue
             lines_to_rec.reconcile()
             print "reconcile mark created"
         logger.info('Reconcile imported moves finished')
-        lines_to_rec.write({'narration': False})
+        lines_to_rec.write({'import_reconcile': False})
