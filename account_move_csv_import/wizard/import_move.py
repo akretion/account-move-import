@@ -130,8 +130,8 @@ class AccountMoveImport(models.TransientModel):
         filestr = self.file_to_import.decode('base64')
         fileobj.write(filestr)
         fileobj.seek(0)  # We must start reading from the beginning !
-        pivot = self.file2pivot(fileobj, filestr,
-            file_with_header=self.file_with_header)
+        pivot = self.file2pivot(
+            fileobj, filestr, file_with_header=self.file_with_header)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
@@ -267,7 +267,6 @@ class AccountMoveImport(models.TransientModel):
             date_str = ln['date']
             # to avoid bug complete date if format id ddmmyy ex 
             # 10118 ==> 010118 (for 01/01/2018)
-            import pdb; pdb.set_trace()
             if date_format == '%d%m%y' and\
                     len(ln['date']) == 5:
                 date_str = '0' + date_str
@@ -405,14 +404,11 @@ class AccountMoveImport(models.TransientModel):
                     partner = bdiop._match_partner(
                         ln['partner'], chatter_msg, partner_type=False)
                 except Exception as e:
-                    # import pdb; pdb.set_trace()
-                    # logger.info(e[0])
                     if create_missing_partner:
                         pass
                     else:
                         raise e
                 if create_missing_partner and not partner:
-                    import pdb; pdb.set_trace()
                     name_field = 'name'
                     # fix bug if module partner_firstname is installed
                     if 'firstname' in part_obj._fields:
