@@ -10,3 +10,4 @@ class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
 
     import_reconcile = fields.Char()
+    import_external_id = fields.Char()

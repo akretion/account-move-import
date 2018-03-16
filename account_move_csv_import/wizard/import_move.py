@@ -100,7 +100,8 @@ class AccountMoveImport(models.TransientModel):
     #  3rd line...
     # ]
 
-    def file2pivot(self, fileobj, filestr, file_with_header=False):
+    def file2pivot(
+        self, fileobj, filestr, file_with_header=False, fieldnames=False):
         file_format = self.file_format
         if file_format == 'meilleuregestion':
             return self.meilleuregestion2pivot(
@@ -108,7 +109,8 @@ class AccountMoveImport(models.TransientModel):
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(
                 fileobj, file_with_header=file_with_header,
-                date_format=self.date_format)
+                date_format=self.date_format,
+                fieldnames=fieldnames)
         elif file_format == 'quadra':
             return self.quadra2pivot(
                 fileobj, file_with_header=file_with_header)
@@ -124,14 +126,15 @@ class AccountMoveImport(models.TransientModel):
         else:
             raise UserError(_("You must select a file format."))
 
-    def run_import(self):
+    def run_import(self, fieldnames=False):
         self.ensure_one()
         fileobj = TemporaryFile('w+')
         filestr = self.file_to_import.decode('base64')
         fileobj.write(filestr)
         fileobj.seek(0)  # We must start reading from the beginning !
         pivot = self.file2pivot(
-            fileobj, filestr, file_with_header=self.file_with_header)
+            fileobj, filestr, file_with_header=self.file_with_header,
+            fieldnames=fieldnames)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
@@ -245,12 +248,13 @@ class AccountMoveImport(models.TransientModel):
         return res
 
     def genericcsv2pivot(self, fileobj, file_with_header=False,
-        date_format='%d/%m/%Y'):
-        # Prisme
-        fieldnames = [
-            'date', 'journal', 'account', 'partner',
-            'ref', 'name', 'debit', 'credit', 'reconcile_ref', 'analytic'
-        ]
+        date_format='%d/%m/%Y', fieldnames=False):
+        # Generic CSV
+        if not fieldnames:
+            fieldnames = [
+                'date', 'journal', 'account', 'partner',
+                'ref', 'name', 'debit', 'credit', 'reconcile_ref', 'analytic'
+            ]
         reader = unicodecsv.DictReader(
             fileobj,
             fieldnames=fieldnames,
@@ -270,12 +274,13 @@ class AccountMoveImport(models.TransientModel):
             if date_format == '%d%m%y' and\
                     len(ln['date']) == 5:
                 date_str = '0' + date_str
+            date = datetime.strptime(date_str, date_format)
             vals = {
                 'journal': {'code': ln['journal']},
                 'account': {'code': ln['account']},
                 'credit': float(ln['credit'].replace(',', '.') or 0),
                 'debit': float(ln['debit'].replace(',', '.') or 0),
-                'date': datetime.strptime(date_str, date_format),
+                'date': date,
                 'name': ln['name'],
                 'reconcile_ref': ln['reconcile_ref'],
                 'line': i,
@@ -284,6 +289,8 @@ class AccountMoveImport(models.TransientModel):
                 vals['analytic'] = {'code': ln['analytic']}
             if ln['partner']:
                 vals['partner'] = {'ref': ln['partner']}
+            if ln.get('id'):
+                vals['id'] = ln['id']
             res.append(vals)
         return res
 
@@ -384,6 +391,7 @@ class AccountMoveImport(models.TransientModel):
         logger.debug('Final pivot: %s', pivot)
         bdio = self.env['business.document.import']
         amo = self.env['account.move']
+        amol = self.env['account.move.line']
         part_obj = self.env['res.partner']
         acc_speed_dict = bdio._prepare_account_speed_dict()
         aacc_speed_dict = bdio._prepare_analytic_account_speed_dict()
@@ -429,6 +437,11 @@ class AccountMoveImport(models.TransientModel):
             journal = bdiop._match_journal(
                 ln['journal'], chatter_msg, journal_speed_dict)
             ln['journal_id'] = journal.id
+            # test if imported:
+            if ln.get('id'):
+                if amol.search([('import_external_id', '=', ln.get('id'))]):
+                    raise UserError(_(
+                    'Line %d: yet imported.') % ln['line'])
             if not ln.get('name'):
                 raise UserError(_(
                     'Line %d: missing label.') % ln['line'])
@@ -521,6 +534,8 @@ class AccountMoveImport(models.TransientModel):
             'analytic_account_id': pivot_line.get('analytic_account_id'),
             'import_reconcile': pivot_line.get('reconcile_ref') or False,
             }
+        if pivot_line.get('id'):
+            vals.update({'import_external_id': pivot_line.get('id')})
         return vals
 
     def reconcile_move_lines(self, moves):
