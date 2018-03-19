@@ -590,5 +590,5 @@ class AccountMoveImport(models.TransientModel):
                 continue
             lines_to_rec.reconcile()
             print "reconcile mark created"
-        logger.info('Reconcile imported moves finished')
-        lines_to_rec.write({'import_reconcile': False})
+            logger.info('Reconcile imported moves finished')
+            lines_to_rec.write({'import_reconcile': False})
