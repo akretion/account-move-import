@@ -14,7 +14,8 @@
     <field name="arch" type="xml">
         <form string="Import Account Move">
             <group name="main">
-                <field name="file_to_import" />
+                <field name="file_to_import" filename="filename"/>
+                <field name="filename" invisible="1"/>
                 <field name="file_format" />
                 <field name="post_move" />
                 <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>

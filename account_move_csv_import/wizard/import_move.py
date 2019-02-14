@@ -25,6 +25,7 @@ class AccountMoveImport(models.TransientModel):
     file_to_import = fields.Binary(
         string='File to Import', required=True,
         help="File containing the journal entry(ies) to import.")
+    filename = fields.Char()
     file_format = fields.Selection([
         ('genericcsv', 'Generic CSV'),
         ('meilleuregestion', 'MeilleureGestion (Prisme)'),
