@@ -28,7 +28,7 @@ class AccountMoveImport(models.TransientModel):
     filename = fields.Char()
     file_format = fields.Selection([
         ('genericcsv', 'Generic CSV'),
-        ('meilleuregestion', 'MeilleureGestion (Prisme)'),
+        ('nibelis', 'Nibelis (Prisme)'),
         ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
         ('cielpaye', 'Ciel Paye'),
@@ -94,8 +94,8 @@ class AccountMoveImport(models.TransientModel):
 
     def file2pivot(self, fileobj, file_bytes):
         file_format = self.file_format
-        if file_format == 'meilleuregestion':
-            return self.meilleuregestion2pivot(fileobj)
+        if file_format == 'nibelis':
+            return self.nibelis2pivot(fileobj)
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(fileobj)
         elif file_format == 'quadra':
@@ -293,7 +293,7 @@ class AccountMoveImport(models.TransientModel):
             res.append(vals)
         return res
 
-    def meilleuregestion2pivot(self, fileobj):
+    def nibelis2pivot(self, fileobj):
         fieldnames = [
             'trasha', 'trashb', 'journal', 'trashd', 'trashe',
             'trashf', 'trashg', 'date', 'trashi', 'trashj', 'trashk',
