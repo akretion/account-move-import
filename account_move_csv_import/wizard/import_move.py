@@ -10,6 +10,7 @@ import unicodecsv
 from tempfile import TemporaryFile
 import base64
 import logging
+from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 try:
@@ -59,6 +60,27 @@ class AccountMoveImport(models.TransientModel):
     force_move_date_required = fields.Boolean('Force Date Required')
     force_move_line_name_required = fields.Boolean('Force Label Required')
     force_journal_required = fields.Boolean('Force Journal Required')
+    date_format = fields.Char(
+        default='%d/%m/%Y',
+        required=True,
+        help='Date format is applicable only on Generic csv file ex "%d%m%Y"')
+    move_ref_unique = fields.Boolean(
+        string='Is move ref unique ?',
+        help="If True, ref is used to detect new move in file.")
+    date_by_move_line = fields.Boolean(
+        string='Is date by move line ?',
+        help="If True, we dont't use date to detecte the lines"
+        "of account move. In odoo date are on account move.")
+    file_with_header = fields.Boolean(
+        help="Indicate if file contain a headers or not.")
+    create_missing_partner = fields.Boolean(
+        help='If True, for all messing partner we will create a new partner.'
+        ' All this partner containt this text "Create by import move" in note'
+        '(comment field). To complete them you can filtre partners by this'
+        ' note text.')
+    check_accounts = fields.Boolean(
+        help='If True, display all messing accounts'
+       )
 
     @api.onchange('file_format')
     def file_format_change(self):
@@ -118,6 +140,25 @@ class AccountMoveImport(models.TransientModel):
         fileobj.write(file_bytes)
         fileobj.seek(0)  # We must start reading from the beginning !
         pivot = self.file2pivot(fileobj, file_bytes)
+        if self.check_accounts:
+            all_accounts = list(map(itemgetter('account'),pivot))
+            accounts = list(set(map(itemgetter('code'),all_accounts)))
+            company_id = self._context.get('force_company') or\
+            self.env.user.company_id.id
+            domain = [
+            ('company_id', '=', company_id),
+            ('deprecated', '=', False),
+            ('code', 'in', accounts)]
+            found_account_nb = self.env['account.account'].search_count(domain)
+            if found_account_nb != len(accounts):
+                found_accounts = self.env['account.account'].search_read(
+                        domain, ['code'])
+                found_account_code = list(map(itemgetter('code'), found_accounts))
+                not_found =  list(set(accounts) - set(found_account_code))
+                raise UserError(_(
+                "Odoo couldn't find any account corresponding to the "
+                "following information extracted from the business document: "
+                "Account code: %s") % not_found)
         fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
@@ -266,6 +307,11 @@ class AccountMoveImport(models.TransientModel):
             'date', 'journal', 'account', 'partner',
             'analytic', 'name', 'debit', 'credit',
             ]
+        first_line = fileobj.readline().decode()
+        dialect = unicodecsv.Sniffer().sniff(first_line)
+        if len(first_line.split(dialect.delimiter)) == 10:
+            fieldnames += ['ref','reconcile_ref']
+        fileobj.seek(0)
         reader = unicodecsv.DictReader(
             fileobj,
             fieldnames=fieldnames,
@@ -277,13 +323,25 @@ class AccountMoveImport(models.TransientModel):
         i = 0
         for l in reader:
             i += 1
+            if i == 1 and self.file_with_header:
+               continue
+            date_str = l['date']
+            try:
+                date = datetime.strptime(date_str, self.date_format)
+            except:
+                raise UserError(_(
+                    "time data 'DATE' : '%s' does not match format '%s"
+                ) % (date_str, self.date_format))
+
             vals = {
                 'journal': {'code': l['journal']},
                 'account': {'code': l['account']},
-                'credit': float(l['credit'] or 0),
-                'debit': float(l['debit'] or 0),
-                'date': datetime.strptime(l['date'], '%d/%m/%Y'),
+                'credit': float(l['credit'].replace(',','.') or 0),
+                'debit': float(l['debit'].replace(',','.')  or 0),
+                'date': date,
                 'name': l['name'],
+                'ref': l.get('ref', ''),
+                'reconcile_ref': l.get('reconcile_ref', ''),
                 'line': i,
                 }
             if l['analytic']:
@@ -403,8 +461,27 @@ class AccountMoveImport(models.TransientModel):
                 l['account'], chatter_msg, acc_speed_dict)
             l['account_id'] = account.id
             if l.get('partner'):
-                partner = bdiop._match_partner(
-                    l['partner'], chatter_msg, partner_type=False)
+                partner = False
+                try:
+                    partner = bdiop._match_partner(
+                        l['partner'], chatter_msg, partner_type=False)
+                except Exception as e:
+                    if create_missing_partner:
+                        pass
+                    else:
+                        raise e
+                if self.create_missing_partner and not partner:
+                    name_field = 'name'
+                    # fix bug if module partner_firstname is installed
+                    if 'firstname' in part_obj._fields:
+                        name_field = 'firstname'
+                    partner = part_obj.create({
+                        name_field: l['partner']['ref'],
+                        'ref': l['partner']['ref'],
+                        'comment': 'Create by import move',
+                    })
+                    logger.info(
+                        ">>>>>>>>>>>>: ajout new partner %s" % l['partner'])
                 l['partner_id'] = partner.commercial_partner_id.id
             if l.get('analytic'):
                 analytic = bdiop._match_analytic_account(
@@ -438,11 +515,16 @@ class AccountMoveImport(models.TransientModel):
         cur_move = {}
         for l in pivot:
             ref = l.get('ref', False)
-            if (
-                    cur_ref == ref and
-                    cur_journal_id == l['journal_id'] and
-                    cur_date == l['date'] and
-                    not float_is_zero(cur_balance, precision_rounding=prec)):
+            detect_new_move = True
+            if self.move_ref_unique:
+                detect_new_move = (cur_ref == ref)
+            if not self.date_by_move_line:
+                detect_new_move = detect_new_move and\
+                    (cur_date == l['date'])
+            detect_new_move = detect_new_move and (
+                cur_journal_id == l['journal_id']) and\
+                not float_is_zero(cur_balance, precision_rounding=prec)
+            if (detect_new_move):
                 # append to current move
                 cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
             else:
@@ -454,8 +536,10 @@ class AccountMoveImport(models.TransientModel):
                         "balanced (balance is %s).")
                         % (l['line'] - 1, cur_balance))
                 if cur_move:
-                    assert len(cur_move['line_ids']) > 1,\
-                        'move should have more than 1 line'
+                    if len(cur_move['line_ids']) <= 1:
+                        raise UserError(_(
+                            "move should have more than 1 line num: %s,"
+                            "data : %s") % (l['line'], cur_move['line_ids']))
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
                 cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l))]

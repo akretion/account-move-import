@@ -27,6 +27,12 @@
                 <field name="force_journal_required" invisible="1"/>
                 <field name="force_move_date_required" invisible="1"/>
                 <field name="force_move_line_name_required" invisible="1"/>
+                <field name="date_format" />
+                <field name="move_ref_unique" />
+                <field name="date_by_move_line" />
+                <field name="file_with_header" />
+                <field name="create_missing_partner"/>
+                <field name="check_accounts"/>
             </group>
             <div name="info-csv">
                 <h2>Information about the Generic CSV format</h2>

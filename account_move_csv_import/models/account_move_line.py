@@ -9,3 +9,6 @@ class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
 
     import_reconcile = fields.Char(string='Import Reconcile Ref')
+    import_external_id = fields.Char(
+            help='can be used to tag imported move.'
+            ' Delete all importred move if need (error on file imported)')
