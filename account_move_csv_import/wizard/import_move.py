@@ -507,7 +507,6 @@ class AccountMoveImport(models.TransientModel):
                 l['account'], chatter_msg, acc_speed_dict)
             l['account_id'] = account.id
             if l.get('partner'):
-                partner = False
                 partner = bdiop._match_partner(
                     l['partner'], chatter_msg, partner_type=False)
                 l['partner_id'] = partner.commercial_partner_id.id
