@@ -205,7 +205,6 @@ class AccountMoveImport(models.TransientModel):
                 "following information extracted from the business document: "
                 "Account code: %s") % not_found)
 
-
         if msg:
             raise UserError(msg)
 
@@ -318,7 +317,7 @@ class AccountMoveImport(models.TransientModel):
             'ref', False, 'name', 'debit', 'credit',
             'reconcile_ref', False, False, False, False]
         first_line = fileobj.readline().decode()
-        dialect = unicodecsv.Sniffer().sniff(first_line,delimiters="|\t")
+        dialect = unicodecsv.Sniffer().sniff(first_line, delimiters="|\t")
         fileobj.seek(0)
         reader = unicodecsv.DictReader(
             fileobj,
@@ -610,6 +609,9 @@ class AccountMoveImport(models.TransientModel):
             'account_id': pivot_line['account_id'],
             'analytic_account_id': pivot_line.get('analytic_account_id'),
             'import_reconcile': pivot_line.get('reconcile_ref'),
+            # set numbrer of imported line to import_external_id
+            # thus we can delete imported lines if necessery
+            'import_external_id': pivot_line.get('line'),
             }
         return vals
 
