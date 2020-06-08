@@ -196,7 +196,6 @@ class AccountMoveImport(models.TransientModel):
         for l in pivot:
             if force_move_date:
                 l['date'] = force_move_date
-                print('force_move_date=', force_move_date)
             if force_move_line_name:
                 l['name'] = force_move_line_name
             if force_move_ref:
