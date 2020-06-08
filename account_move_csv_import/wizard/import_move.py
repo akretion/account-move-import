@@ -5,7 +5,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from odoo.tools import float_is_zero
-from datetime import datetime
+from datetime import datetime, date as datelib
 import unicodecsv
 from tempfile import TemporaryFile
 import base64
@@ -191,16 +191,18 @@ class AccountMoveImport(models.TransientModel):
         force_move_date = self.force_move_date
         force_move_ref = self.force_move_ref
         force_move_line_name = self.force_move_line_name
-        force_journal = self.force_journal_id or False
+        force_journal_code =\
+            self.force_journal_id and self.force_journal_id.code or False
         for l in pivot:
             if force_move_date:
                 l['date'] = force_move_date
+                print('force_move_date=', force_move_date)
             if force_move_line_name:
                 l['name'] = force_move_line_name
             if force_move_ref:
                 l['ref'] = force_move_ref
-            if force_journal:
-                l['journal'] = {'recordset': force_journal}
+            if force_journal_code:
+                l['journal'] = force_journal_code
             if not l['credit']:
                 l['credit'] = 0.0
             if not l['debit']:
@@ -549,7 +551,7 @@ class AccountMoveImport(models.TransientModel):
                 errors['other'].append(_(
                     'Line %d: missing date.') % l['line'])
             else:
-                if not isinstance(l.get('date'), datetime):
+                if not isinstance(l.get('date'), datelib):
                     try:
                         l['date'] = datetime.strptime(l['date'], '%Y-%m-%d')
                     except Exception:
