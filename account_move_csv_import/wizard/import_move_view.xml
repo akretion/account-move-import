@@ -27,42 +27,34 @@
                 <field name="force_move_date_required" invisible="1"/>
                 <field name="force_move_line_name_required" invisible="1"/>
                 <field name="advanced_options"/>
-                <div attrs="{'invisible': [('advanced_options', '!=', True)],}">
-                    <p>
-                        Advenced options are used for generic csv format.
-                        You can add tow columns ['ref', 'reconcile_ref'] to a generic csv format 
-                        after the credit column.
-                        The column 'ref' is used with "ref is unique" and "force move number" options.
-                        The column reconcile_ref is used to reconcile account entries in odoo.
-                    </p>
-                </div>
-
-                <field name="file_with_header" attrs="{'invisible': [('advanced_options', '!=',True)],}"/>
-                <field name="date_format" attrs="{'invisible': [('advanced_options', '!=', True)],}"/>
-                <field name="move_ref_unique" attrs="{'invisible': [('advanced_options', '!=', True)],}"/>
-                <field name="force_move_number" attrs="{'invisible': [('advanced_options', '!=', True)],}"/>
-                <field name="date_by_move_line" attrs="{'invisible': [('advanced_options', '!=', True)],}"/>
             </group>
-            <div name="info-csv">
+            <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
+                <field name="file_with_header" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
+                <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
+                <field name="move_ref_unique"/>
+                <field name="force_move_number" attrs="{'invisible': [('move_ref_unique', '!=', True)]}"/>
+                <field name="date_by_move_line"/>
+            </group>
+            <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
                 <h2>Information about the Generic CSV format</h2>
                 <ul>
                     <li><em>Columns</em>:
-                        <ol><li>Date (DD/MM/YYYY)</li>
+                        <ol><li>Date (DD/MM/YYYY or configurable)</li>
                         <li>Journal code</li>
-                        <li>Legal account</li>
+                        <li>Account code</li>
                         <li>Partner internal reference</li>
-                        <li>Analytic account</li>
+                        <li>Analytic account code</li>
                         <li>Label</li>
                         <li>Debit</li>
                         <li>Credit</li>
+                        <li>Ref (used as Journal Entry Ref)</li>
+                        <li>Reconcile ref (used for reconciliation after import)</li>
                         </ol></li>
                     <li><em>Encoding</em>: UTF-8</li>
-                    <li><em>Field separator</em>: , (coma)</li>
+                    <li><em>Field separator</em>: auto-detected</li>
                     <li><em>Text separator</em>: &quot; (quote)</li>
-                    <li><em>Decimal separator</em>: . (dot)</li>
-                    </ul>
-                    <p>If exporting from LibreOffice, set Language to
-                        English on numeric cells.</p>
+                    <li><em>Decimal separator</em>: . (dot) or , (coma)</li>
+                  </ul>
             </div>
             <footer>
                 <button name="run_import" type="object" string="Run Import" class="oe_highlight" />
