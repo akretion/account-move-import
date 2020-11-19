@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-  © 2012-2017 Akretion (http://www.akretion.com/)
+  Copyright 2012-2020 Akretion (http://www.akretion.com/)
   @author: Alexis de Lattre <alexis.delattre@akretion.com>
   License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 -->
@@ -72,7 +72,7 @@
 </record>
 
 <menuitem id="account_move_import_menu"
-        parent="account.menu_finance_entries"
+        parent="account.menu_finance_entries_actions"
         action="account_move_import_action"
         sequence="150" />
 

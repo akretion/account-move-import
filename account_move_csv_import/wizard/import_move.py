@@ -1,10 +1,9 @@
-# Copyright 2012-2019 Akretion France (http://www.akretion.com)
+# Copyright 2012-2020 Akretion France (http://www.akretion.com)
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import models, fields, api, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-from odoo.tools import float_is_zero
 from datetime import datetime, date as datelib
 import unicodecsv
 from tempfile import TemporaryFile
@@ -459,7 +458,7 @@ class AccountMoveImport(models.TransientModel):
 
     def _partner_speed_dict(self):
         partner_speed_dict = {}
-        company_id = self.env.user.company_id.id
+        company_id = self.env.company.id
         partner_sr = self.env['res.partner'].search_read(
             [
                 '|',
@@ -476,7 +475,7 @@ class AccountMoveImport(models.TransientModel):
     def create_moves_from_pivot(self, pivot, post=False):
         logger.debug('Final pivot: %s', pivot)
         amo = self.env['account.move']
-        company_id = self.env.user.company_id.id
+        company_id = self.env.company.id
         # Generate SPEED DICTS
         acc_speed_dict = {}
         acc_sr = self.env['account.account'].search_read([
@@ -585,14 +584,14 @@ class AccountMoveImport(models.TransientModel):
         cur_ref = False
         cur_date = False
         cur_balance = 0.0
-        prec = self.env.user.company_id.currency_id.rounding
+        comp_cur = self.env.company.currency_id
         seq = self.env['ir.sequence'].next_by_code('account.move.import')
         cur_move = {}
         for l in pivot:
             ref = l.get('ref', False)
             same_move = [
                 cur_journal_id == l['journal_id'],
-                not float_is_zero(cur_balance, precision_rounding=prec)]
+                not comp_cur.is_zero(cur_balance)]
             if not self.date_by_move_line:
                 same_move.append(cur_date == l['date'])
             if self.move_ref_unique:
@@ -602,8 +601,7 @@ class AccountMoveImport(models.TransientModel):
                 cur_move['line_ids'].append((0, 0, self._prepare_move_line(l, seq)))
             else:
                 # new move
-                if moves and not float_is_zero(
-                        cur_balance, precision_rounding=prec):
+                if moves and not comp_cur.is_zero(cur_balance):
                     raise UserError(_(
                         "The journal entry that ends on line %d is not "
                         "balanced (balance is %s).")
@@ -622,7 +620,7 @@ class AccountMoveImport(models.TransientModel):
             cur_balance += l['credit'] - l['debit']
         if cur_move:
             moves.append(cur_move)
-        if not float_is_zero(cur_balance, precision_rounding=prec):
+        if not comp_cur.is_zero(cur_balance):
             raise UserError(_(
                 "The journal entry that ends on the last line is not "
                 "balanced (balance is %s).") % cur_balance)
@@ -632,7 +630,7 @@ class AccountMoveImport(models.TransientModel):
         logger.info(
             'Account moves IDs %s created via file import' % rmoves.ids)
         if post:
-            rmoves.post()
+            rmoves.action_post()
         return rmoves
 
     def _prepare_move(self, pivot_line):
@@ -659,7 +657,7 @@ class AccountMoveImport(models.TransientModel):
         return vals
 
     def reconcile_move_lines(self, moves):
-        prec = self.env.user.company_id.currency_id.rounding
+        comp_cur = self.env.company.currency_id
         logger.info('Start to reconcile imported moves')
         lines = self.env['account.move.line'].search([
             ('move_id', 'in', moves.ids),
@@ -685,7 +683,7 @@ class AccountMoveImport(models.TransientModel):
                 total -= line.debit
                 accounts[line.account_id] = True
                 partners[line.partner_id.id or False] = True
-            if not float_is_zero(total, precision_digits=prec):
+            if not comp_cur.is_zero(total):
                 logger.warning(
                     "Skip reconcile of ref '%s' because the lines with "
                     "this ref are not balanced (%s)", rec_ref, total)
