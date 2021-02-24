@@ -518,6 +518,12 @@ class AccountMoveImport(models.TransientModel):
                 'missing line number'
             if l['account'] in acc_speed_dict:
                 l['account_id'] = acc_speed_dict[l['account']]
+            # Custom CB - Regroup al 401 into one
+            if not l.get('account_id'):
+                acc_code_tmp = l['account']
+                if acc_code_tmp.startswith('401'):
+                    acc_code_tmp = "401100"
+                    l['account_id'] = acc_speed_dict[acc_code_tmp]
             if not l.get('account_id'):
                 # Match when import = 61100000 and Odoo has 611000
                 acc_code_tmp = l['account']
