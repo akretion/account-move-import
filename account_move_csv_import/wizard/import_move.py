@@ -472,35 +472,43 @@ class AccountMoveImport(models.TransientModel):
             partner_speed_dict[l['ref'].upper()] = l['id']
         return partner_speed_dict
 
-    def create_moves_from_pivot(self, pivot, post=False):
-        logger.debug('Final pivot: %s', pivot)
-        amo = self.env['account.move']
-        company_id = self.env.company.id
-        # Generate SPEED DICTS
+    def _get_acc_speed_dict(self, company_id):
         acc_speed_dict = {}
         acc_sr = self.env['account.account'].search_read([
             ('company_id', '=', company_id),
             ('deprecated', '=', False)], ['code'])
         for l in acc_sr:
             acc_speed_dict[l['code'].upper()] = l['id']
+        return acc_speed_dict
+
+    def _get_journal_speed_dict(self, company_id):
+        journal_speed_dict = {}
+        journal_sr = self.env['account.journal'].search_read([
+            ('company_id', '=', company_id)], ['code'])
+        for l in journal_sr:
+            journal_speed_dict[l['code'].upper()] = l['id']
+        return journal_speed_dict
+
+    def create_moves_from_pivot(self, pivot, post=False):
+        logger.debug('Final pivot: %s', pivot)
+        amo = self.env['account.move']
+        company_id = self.env.company.id
+        # Generate SPEED DICTS
+        acc_speed_dict = self._get_acc_speed_dict(company_id)
         aacc_speed_dict = {}
         aacc_sr = self.env['account.analytic.account'].search_read(
             [('company_id', '=', company_id), ('code', '!=', False)],
             ['code'])
         for l in aacc_sr:
             aacc_speed_dict[l['code'].upper()] = l['id']
-        journal_speed_dict = {}
-        journal_sr = self.env['account.journal'].search_read([
-            ('company_id', '=', company_id)], ['code'])
-        for l in journal_sr:
-            journal_speed_dict[l['code'].upper()] = l['id']
+        journal_speed_dict = self._get_journal_speed_dict(company_id)
         partner_speed_dict = self._partner_speed_dict()
         key2label = {
             'journal': _('journal codes'),
             'account': _('account codes'),
             'partner': _('partner reference'),
             'analytic': _('analytic codes'),
-            }
+        }
         errors = {'other': []}
         for key in key2label.keys():
             errors[key] = {}
