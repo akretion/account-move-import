@@ -19,6 +19,14 @@ except ImportError:
 GENERIC_CSV_DEFAULT_DATE = '%d/%m/%Y'
 
 
+INVOICES_CODES = {
+    "SAJ": 'out_invoice',
+    "SCNJ": 'out_refund',
+    "EXJ": "in_invoice",
+    "ECNJ": "in_refund",
+}
+
+
 class AccountMoveImport(models.TransientModel):
     _name = "account.move.import"
     _description = "Import account move from CSV file"
@@ -266,13 +274,13 @@ class AccountMoveImport(models.TransientModel):
         fieldnames = [
             'journal',        # JournalCode
             False,            # JournalLib
-            False,            # EcritureNum
+            'num',            # EcritureNum
             'date',           # EcritureDate
             'account',        # CompteNum
             False,            # CompteLib
             'partner_ref',    # CompAuxNum
             False,            # CompAuxLib
-            'ref',            # PieceRef
+            'ref',            # PieceRef # ref
             False,            # PieceDate
             'name',           # EcritureLib
             'debit',          # Debit
@@ -282,6 +290,7 @@ class AccountMoveImport(models.TransientModel):
             False,            # ValidDate
             False,            # Montantdevise
             False,            # Idevise
+            'old_id',         # custom addition
             ]
         first_line = fileobj.readline().decode()
         dialect = unicodecsv.Sniffer().sniff(first_line, delimiters="|\t")
@@ -298,6 +307,8 @@ class AccountMoveImport(models.TransientModel):
             # Skip header line
             if i == 1:
                 continue
+            if l['account'].startswith('411') and l['account'] != "411CLIENT":
+                continue
             l['credit'] = l['credit'] or '0'
             l['debit'] = l['debit'] or '0'
             vals = {
@@ -311,6 +322,8 @@ class AccountMoveImport(models.TransientModel):
                 'ref': l['ref'],
                 'reconcile_ref': l['reconcile_ref'],
                 'line': i,
+                'old_id': l['old_id'],
+                'num': l['num'],
             }
             res.append(vals)
         return res
@@ -595,6 +608,7 @@ class AccountMoveImport(models.TransientModel):
         # EXTRACT MOVES
         moves = []
         cur_journal_id = False
+        cur_old_id = False
         cur_ref = False
         cur_date = False
         cur_balance = 0.0
@@ -605,7 +619,8 @@ class AccountMoveImport(models.TransientModel):
             ref = l.get('ref', False)
             same_move = [
                 cur_journal_id == l['journal_id'],
-                not comp_cur.is_zero(cur_balance)]
+                cur_old_id == l['old_id']
+            ]
             if not self.date_by_move_line:
                 same_move.append(cur_date == l['date'])
             if self.move_ref_unique:
@@ -631,6 +646,7 @@ class AccountMoveImport(models.TransientModel):
                 cur_date = l['date']
                 cur_ref = ref
                 cur_journal_id = l['journal_id']
+                cur_old_id = l['old_id']
             cur_balance += l['credit'] - l['debit']
         if cur_move:
             moves.append(cur_move)
@@ -648,13 +664,24 @@ class AccountMoveImport(models.TransientModel):
         return rmoves
 
     def _prepare_move(self, pivot_line):
+        ref = pivot_line.get('ref', '') != '-' and pivot_line.get('ref') or pivot_line.get('old_id')
         vals = {
             'journal_id': pivot_line['journal_id'],
-            'ref': pivot_line.get('ref'),
+            'ref': ref,
             'date': pivot_line['date'],
+            'migration_ref': pivot_line.get('num', '') != '/' and pivot_line.get('num', '') or pivot_line.get('old_id'),
             }
-        if self.force_move_number and pivot_line.get('ref'):
-            vals['name'] = pivot_line.get('ref')
+        if self.force_move_number and pivot_line.get('num') and pivot_line['journal'] in ('SAJ', 'SCNJ'):
+            vals['name'] = pivot_line.get('num')
+#        inv_type = INVOICES_CODES.get(pivot_line.get('journal'))
+#        if inv_type:
+#            if inv_type in ('in_invoice', 'in_refund'):
+#                # ref need to be unique
+#                if pivot_line.get('ref', '') != '-':
+#                    ref = "%s-%s" % (ref, pivot_line.get('old_id'))
+#                    vals['ref'] = ref
+#            vals["move_type"] = inv_type
+#            vals["partner_id"] = pivot_line['partner_id']
         return vals
 
     def _prepare_move_line(self, pivot_line, sequence):
