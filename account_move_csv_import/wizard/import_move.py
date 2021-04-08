@@ -307,8 +307,6 @@ class AccountMoveImport(models.TransientModel):
             # Skip header line
             if i == 1:
                 continue
-            if l['account'].startswith('411') and l['account'] != "411CLIENT":
-                continue
             l['credit'] = l['credit'] or '0'
             l['debit'] = l['debit'] or '0'
             vals = {
@@ -472,7 +470,7 @@ class AccountMoveImport(models.TransientModel):
     def _partner_speed_dict(self):
         partner_speed_dict = {}
         company_id = self.env.company.id
-        partner_sr = self.env['res.partner'].search_read(
+        partner_sr = self.env['res.partner'].with_context(active_test=False).search_read(
             [
                 '|',
                 ('company_id', '=', company_id),
