@@ -307,6 +307,9 @@ class AccountMoveImport(models.TransientModel):
             # Skip header line
             if i == 1:
                 continue
+            # Old balanced accounts but unreconciled... (NSB)
+            if l['account'] in ('411CB3', '411PAYPA', '411VIRMT', '411CETELEM'):
+                continue
             l['credit'] = l['credit'] or '0'
             l['debit'] = l['debit'] or '0'
             vals = {
@@ -527,8 +530,8 @@ class AccountMoveImport(models.TransientModel):
         for l in pivot:
             assert l.get('line') and isinstance(l.get('line'), int),\
                 'missing line number'
-            if l['account'] in acc_speed_dict:
-                l['account_id'] = acc_speed_dict[l['account']]
+            if l['account'].upper() in acc_speed_dict:
+                l['account_id'] = acc_speed_dict[l['account'].upper()]
             # Custom CB - Regroup al 401 into one
             if not l.get('account_id'):
                 acc_code_tmp = l['account']
@@ -564,8 +567,8 @@ class AccountMoveImport(models.TransientModel):
                     l['analytic_account_id'] = aacc_speed_dict[l['analytic']]
                 else:
                     errors['analytic'].setdefault(l['analytic'], []).append(l['line'])
-            if l['journal'] in journal_speed_dict:
-                l['journal_id'] = journal_speed_dict[l['journal']]
+            if l['journal'].upper() in journal_speed_dict:
+                l['journal_id'] = journal_speed_dict[l['journal'].upper()]
             else:
                 errors['journal'].setdefault(l['journal'], []).append(l['line'])
             if not l.get('name'):
