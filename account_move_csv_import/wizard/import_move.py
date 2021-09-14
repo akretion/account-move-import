@@ -459,7 +459,7 @@ class AccountMoveImport(models.TransientModel):
 
     def _partner_speed_dict(self):
         partner_speed_dict = {}
-        company_id = self.env.user.company_id.id
+        company_id = self.env.company.id
         partner_sr = self.env['res.partner'].search_read(
             [
                 '|',
@@ -476,7 +476,7 @@ class AccountMoveImport(models.TransientModel):
     def create_moves_from_pivot(self, pivot, post=False):
         logger.debug('Final pivot: %s', pivot)
         amo = self.env['account.move']
-        company_id = self.env.user.company_id.id
+        company_id = self.env.company.id
         # Generate SPEED DICTS
         acc_speed_dict = {}
         acc_sr = self.env['account.account'].search_read([
@@ -585,7 +585,7 @@ class AccountMoveImport(models.TransientModel):
         cur_ref = False
         cur_date = False
         cur_balance = 0.0
-        prec = self.env.user.company_id.currency_id.rounding
+        prec = self.env.company.currency_id.rounding
         seq = self.env['ir.sequence'].next_by_code('account.move.import')
         cur_move = {}
         for l in pivot:
@@ -659,7 +659,7 @@ class AccountMoveImport(models.TransientModel):
         return vals
 
     def reconcile_move_lines(self, moves):
-        prec = self.env.user.company_id.currency_id.rounding
+        prec = self.env.company.currency_id.rounding
         logger.info('Start to reconcile imported moves')
         lines = self.env['account.move.line'].search([
             ('move_id', 'in', moves.ids),
