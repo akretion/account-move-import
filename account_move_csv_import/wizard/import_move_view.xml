@@ -29,6 +29,7 @@
                 <field name="force_journal_required" invisible="1"/>
                 <field name="force_move_date_required" invisible="1"/>
                 <field name="force_move_line_name_required" invisible="1"/>
+                <field name="move_prefix"/>
                 
             </group>
             <div name="info-csv">

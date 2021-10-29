@@ -63,6 +63,7 @@ class AccountMoveImport(models.TransientModel):
     force_journal_required = fields.Boolean('Force Journal Required')
     account_map_id = fields.Many2one('account.move.import.map', 'Account Mapping')
     col_map_id = fields.Many2one('account.move.import.col.map', 'Column Mapping')
+    move_prefix = fields.Char('Label prefix')
 
     @api.onchange('file_format')
     def file_format_change(self):
@@ -496,7 +497,7 @@ class AccountMoveImport(models.TransientModel):
         return res
     
     def create_moves_from_pivot(self, pivot, post=False):
-        logger.debug('Final pivot: %s', pivot)
+        logger.info('Final pivot: %s', pivot)
         bdio = self.env['business.document.import']
         amo = self.env['account.move']
         if self.account_map_id:
@@ -555,7 +556,8 @@ class AccountMoveImport(models.TransientModel):
                     cur_ref == ref and
                     cur_journal_id == l['journal_id'] and
                     cur_date == l['date'] and
-                    not float_is_zero(cur_balance, precision_rounding=prec)):
+                    ref):
+                    # not float_is_zero(cur_balance, precision_rounding=prec)):
                 # append to current move
                 cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
             else:
@@ -563,12 +565,12 @@ class AccountMoveImport(models.TransientModel):
                 if moves and not float_is_zero(
                         cur_balance, precision_rounding=prec):
                     raise UserError(_(
-                        "The journal entry that ends on line %d is not "
+                        "The journal entry that ends on line %d (voucher %s)is not "
                         "balanced (balance is %s).")
-                        % (l['line'] - 1, cur_balance))
+                        % (l['line'] - 1, l['ref'], cur_balance))
                 if cur_move:
-                    assert len(cur_move['line_ids']) > 1,\
-                        'move should have more than 1 line'
+                    if not len(cur_move['line_ids']) > 1:
+                        raise UserError(_('move should have more than 1 line (%s) %d') % (cur_ref, len(cur_move['line_ids'])))
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
                 cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l))]
@@ -597,6 +599,8 @@ class AccountMoveImport(models.TransientModel):
             'ref': pivot_line.get('ref'),
             'date': pivot_line['date'],
             }
+        if self.move_prefix:
+            vals['name'] = "%s-%s" % (self.move_prefix, pivot_line.get('ref'))
         return vals
 
     def _prepare_move_line(self, pivot_line):
