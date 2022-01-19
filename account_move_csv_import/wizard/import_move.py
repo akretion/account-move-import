@@ -136,7 +136,7 @@ class AccountMoveImport(models.TransientModel):
         elif file_format == 'extenso':
             return self.extenso2pivot(fileobj)
         elif file_format == 'payfit':
-            return self.payfit2pivot(file_bytes)
+            return self.payfit2pivot(fileobj)
         elif file_format == 'cielpaye':
             return self.cielpaye2pivot(fileobj)
         elif file_format == 'fec_txt':
@@ -425,34 +425,32 @@ class AccountMoveImport(models.TransientModel):
                 res.append(vals)
         return res
 
-    def payfit2pivot(self, file_bytes):
-        wb = xlrd.open_workbook(file_contents=file_bytes)
-        sh1 = wb.sheet_by_index(1)
+    def payfit2pivot(self, fileobj):
+        # Columns in Payfit exported CSV :
+        # JournalCode
+        # JournalLib
+        # EcritureDate
+        # CompteNum
+        # CompteLib
+        # Debit
+        # Credit
+        # AxeLib
+        # AxeReference
+        reader = unicodecsv.DictReader(fileobj, delimiter=";", encoding="utf-8")
         i = 0
         res = []
-        name = u'Paye'
-        for rownum in range(sh1.nrows):
-            row = sh1.row_values(rownum)
+        for l in reader:
             i += 1
-            if i == 1:
-                continue
-            if not row[0]:
-                continue
-            account = str(row[0])
-            if '.' in account:
-                account = account.split('.')[0]
-            if not account[0].isdigit():
-                continue
-            analytic = str(row[3])
             vals = {
-                'account': account,
-                'name': name,
-                'debit': float(row[5] or 0.0),
-                'credit': float(row[6] or 0.0),
-                'line': i,
+                "journal": l.get("JournalCode", ""),
+                "account": l["CompteNum"],
+                "name": l["CompteLib"],
+                "credit": float(l["Credit"] or 0.0),
+                "debit": float(l["Debit"] or 0.0),
+                "analytic": l.get("AxeReference", ""),
+                "date": datetime.strptime(l["EcritureDate"], "%d/%m/%Y"),
+                "line": i,
             }
-            if analytic:
-                vals['analytic'] = analytic
             res.append(vals)
         return res
 
