@@ -214,7 +214,7 @@ class AccountMoveImport(models.TransientModel):
             fileobj,
             fieldnames=fieldnames,
             delimiter='\t',
-            quoting=False,
+            quoting=unicodecsv.QUOTE_MINIMAL,
             encoding='utf-8')
         res = []
         i = 0
@@ -377,7 +377,7 @@ class AccountMoveImport(models.TransientModel):
             fileobj,
             fieldnames=fieldnames,
             delimiter=';',
-            quoting=False,
+            quoting=unicodecsv.QUOTE_MINIMAL,
             encoding='latin1')
         res = []
         i = 0
