@@ -35,7 +35,8 @@ class AccountMoveImport(models.TransientModel):
         ('payfit', 'Payfit'),
         ('fec_txt', 'FEC (text)'),
         ('danloen', u'Danløn'),
-        ('c5', 'C5')
+        ('c5', 'C5'),
+        ('zenegy', 'Zenegy løn'),
         ], string='File Format', required=True, default='danloen',
         help="Select the type of file you are importing.")
     post_move = fields.Boolean(
@@ -120,6 +121,8 @@ class AccountMoveImport(models.TransientModel):
             return self.danloen2pivot(fileobj)
         elif file_format == 'c5':
             return self.c52pivot(fileobj)
+        elif file_format == 'zenegy':
+            return self.zenegy2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -333,11 +336,72 @@ class AccountMoveImport(models.TransientModel):
                     'debit': debit,
                     'date': datetime.strptime(l['date'], '%Y-%m-%d'),
                     'line': i,
-                    'ref': u'Løn ' + l['period']
+                    'ref': 'Løn ' + l['period']
                 }
                 res.append(vals)
         return res
 
+    def zenegy2pivot(self, fileobj):
+        #fieldnames = [
+        #    'number', 'date', False, 'account', False, 'amount', 'name', 'period']
+        aa = self.env['account.analytic.account']
+        line1 = fileobj.readline().decode('iso-8859-1')
+        logger.info('LOEN: %s', line1) 
+        if line1.startswith(u'Lønkørsels ID;CVR nummer;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
+            fileobj.seek(0)
+        elif line1.startswith(u'Lønkørsels ID;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
+            fileobj.seek(0)
+        elif line1.startswith(u'Lønkørsels-ID;CVR nummer;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
+            fileobj.seek(0)
+        elif line1.startswith(u'Lønkørsels-ID;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
+            fileobj.seek(0)
+        elif not line1.startswith('sep=;'):
+            raise UserError(_("This is not a Zenergy Payroll file."))
+        reader = unicodecsv.DictReader(
+            fileobj,
+            delimiter=';',
+            encoding='iso-8859-1')
+        res = []
+        i = 0
+        for l in reader:
+            i += 1
+            if u'Lønkørsels ID' in l:
+                loen_id_key = u'Lønkørsels ID'
+            else:
+                loen_id_key = u'Lønkørsels-ID'
+            if l[loen_id_key].isdigit():
+                debit = 0
+                credit = 0
+                credit2 = 0
+                if l['Debet']:
+                    debit = float(l['Debet'].replace('.', '').replace(',', '.'))
+                if l['Kredit']:
+                    credit = float(l['Kredit'].replace('.', '').replace(',', '.'))
+                if credit and debit:
+                    credit2 = credit
+                    credit = 0
+                vals = {
+                    'account': {'code': l['Konto']},
+                    'name': l['Tekst'],
+                    'credit': credit,
+                    'debit': debit,
+                    'date': datetime.strptime(l['Dispositionsdato'], '%d-%m-%Y'),
+                    'line': i,
+                    'ref': u'Løn #%s: %s %s - %s' % (l[loen_id_key], l['Afdelingsnavn'], l['Periode fra'], l['Periode til'])
+                }
+                if l['Afdelingsnavn']:
+                    analytic = aa.search([('name', '=', l['Afdelingsnavn'])])
+                    if analytic:
+                        vals['analytic_account_id'] = analytic.id
+                logger.info('VALS: %s', vals)
+                res.append(vals)
+                if credit2:
+                    vals2 = vals.copy()
+                    vals2['debit'] = 0
+                    vals2['credit'] = credit2
+                    res.append(vals2)
+        return res
+    
 
     def meilleuregestion2pivot(self, fileobj):
         fieldnames = [
