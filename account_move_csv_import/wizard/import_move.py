@@ -90,7 +90,7 @@ class AccountMoveImport(models.TransientModel):
             self.force_journal_required = False
 
     @api.onchange('move_ref_unique')
-    def file_format_change(self):
+    def move_ref_unique_change(self):
         if not self.move_ref_unique:
             # we can't force move number if ref is not unique
             self.force_move_number = False
@@ -157,14 +157,10 @@ class AccountMoveImport(models.TransientModel):
         self.update_pivot(pivot)
         moves = self.create_moves_from_pivot(pivot, post=self.post_move)
         self.reconcile_move_lines(moves)
-        action = {
-            'name': _('Imported Journal Entries'),
-            'res_model': 'account.move',
-            'type': 'ir.actions.act_window',
-            'nodestroy': False,
-            'target': 'current',
-            }
-
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "account.action_move_journal_line")
+        action["views"] = False
+        action["view_id"] = False
         if len(moves) == 1:
             action.update({
                 'view_mode': 'form,tree',
