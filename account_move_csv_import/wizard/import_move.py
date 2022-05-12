@@ -338,9 +338,9 @@ class AccountMoveImport(models.TransientModel):
             try:
                 date = datetime.strptime(date_str, self.date_format)
             except Exception:
-                raise UserError(
-                    (_("time data : '%s' in line %s does not match format '%s")
-                     ) % (date_str, i, self.date_format))
+                raise UserError(_(
+                    "Date parsing error: '%s' in line %s does not match "
+                    "date format '%s'.") % (date_str, i, self.date_format))
 
             vals = {
                 'journal': l['journal'],
