@@ -14,11 +14,12 @@ Account Move Import
 ===================
 
 This module handle the import of one or several account moves from a file
-(CSV, TXT, XLS or any other format). The name of this module
+(XLSX, CSV, TXT or any other format). The name of this module
 is account_move_csv_import, but it is not limited to the import of CSV files
 (this is an historic name and I didn't want to change it).
 This module currently supports:
 
+* XLSX files,
 * LibreOffice CSV export files,
 * MeilleureGestion.com payroll CSV files,
 * Quadra export files,
@@ -32,7 +33,7 @@ This module can easily be extended to support other formats.
 This module also supports account move line reconciliation (used for FEC import).
 
 There are many community modules that handle the import of account moves
-via CSV/TXT files.
+via CSV/XLSX files.
 But I decided to develop this module because I wanted a module with
 the following design guidelines:
 
@@ -47,7 +48,7 @@ from Akretion (alexis.delattre@akretion.com).
     'website': 'http://www.akretion.com',
     'depends': ['account'],
     'demo': ['demo/demo.xml'],
-    'external_dependencies': {'python': ['unicodecsv', 'xlrd']},
+    'external_dependencies': {'python': ['unicodecsv', 'openpyxl']},
     'data': [
         'data/sequence.xml',
         'security/ir.model.access.csv',

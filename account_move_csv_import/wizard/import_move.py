@@ -6,15 +6,15 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from datetime import datetime, date as datelib
 import unicodecsv
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 import base64
 import logging
 
 logger = logging.getLogger(__name__)
 try:
-    import xlrd
+    import openpyxl
 except ImportError:
-    logger.debug('Cannot import xlrd')
+    logger.debug('Cannot import openpyxl')
 
 GENERIC_CSV_DEFAULT_DATE = '%d/%m/%Y'
 
@@ -28,6 +28,7 @@ class AccountMoveImport(models.TransientModel):
         help="File containing the journal entry(ies) to import.")
     filename = fields.Char()
     file_format = fields.Selection([
+        ('genericxlsx', 'Generic XLSX'),
         ('genericcsv', 'Generic CSV'),
         ('fec_txt', 'FEC (text)'),
         ('nibelis', 'Nibelis (Prisme)'),
@@ -35,7 +36,7 @@ class AccountMoveImport(models.TransientModel):
         ('extenso', 'In Extenso'),
         ('cielpaye', 'Ciel Paye'),
         ('payfit', 'Payfit'),
-        ], string='File Format', required=True,
+        ], string='File Format', required=True, default='genericxlsx',
         help="Select the type of file you are importing.")
     post_move = fields.Boolean(
         string='Post Journal Entry',
@@ -67,7 +68,7 @@ class AccountMoveImport(models.TransientModel):
              " an other accountng software in case you change it to odoo")
     date_by_move_line = fields.Boolean(
         string='Is date by move line ?',
-        help="If True, we dont't use date to detecte the lines"
+        help="If True, we don't use date to detecte the lines"
         "of account move. In odoo date are on account move.")
     # START advanced options used in 'genericcsv' import
     # (but could be used by other imports if needed)
@@ -76,7 +77,8 @@ class AccountMoveImport(models.TransientModel):
         required=True,
         help='Date format is applicable only on Generic csv file ex "%d%m%Y"')
     file_with_header = fields.Boolean(
-        help="Indicate if file contain a headers or not.")
+        string='Has Header Line',
+        help="Indicate if the first line is a header line and should be ignored.")
 
     @api.onchange('file_format')
     def file_format_change(self):
@@ -131,6 +133,8 @@ class AccountMoveImport(models.TransientModel):
             return self.nibelis2pivot(fileobj)
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(fileobj)
+        elif file_format == 'genericxlsx':
+            return self.genericxlsx2pivot(fileobj)
         elif file_format == 'quadra':
             return self.quadra2pivot(file_bytes)
         elif file_format == 'extenso':
@@ -146,7 +150,7 @@ class AccountMoveImport(models.TransientModel):
 
     def run_import(self):
         self.ensure_one()
-        fileobj = TemporaryFile('wb+')
+        fileobj = NamedTemporaryFile('wb+', prefix='odoo-move_import-', suffix='.xlsx')
         file_bytes = base64.b64decode(self.file_to_import)
         fileobj.write(file_bytes)
         fileobj.seek(0)  # We must start reading from the beginning !
@@ -359,6 +363,35 @@ class AccountMoveImport(models.TransientModel):
                 vals['analytic'] = l['analytic']
             if l['partner']:
                 vals['partner'] = l['partner']
+            res.append(vals)
+        return res
+
+    def genericxlsx2pivot(self, fileobj):
+        wb = openpyxl.load_workbook(fileobj.name, read_only=True)
+        sh = wb.active
+        res = []
+        i = 0
+        for row in sh.rows:
+            i += 1
+            if i == 1 and self.file_with_header:
+                continue
+            if len(row) < 8:
+                continue
+            vals = {
+                'journal': row[1].value,
+                'account': str(row[2].value),
+                'credit': row[7].value,
+                'debit': row[6].value,
+                'date': row[0].value,
+                'name': row[5].value,
+                'ref': len(row) > 8 and row[8].value or '',
+                'reconcile_ref': len(row) > 9 and row[9].value or '',
+                'line': i,
+                }
+            if row[4].value:
+                vals['analytic'] = row[4].value
+            if row[3].value:
+                vals['partner'] = row[3].value
             res.append(vals)
         return res
 

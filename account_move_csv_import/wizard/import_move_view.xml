@@ -29,7 +29,7 @@
                 <field name="advanced_options"/>
             </group>
             <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
-                <field name="file_with_header" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
+                <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
                 <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
                 <field name="move_ref_unique"/>
                 <field name="force_move_number" attrs="{'invisible': [('move_ref_unique', '!=', True)]}"/>
@@ -55,10 +55,28 @@
                     <li><em>Text separator</em>: &quot; (quote)</li>
                     <li><em>Decimal separator</em>: . (dot) or , (coma)</li>
                   </ul>
+              </div>
+            <div name="info-xlsx" attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}">
+                <h2>Information about the Generic XLSX format</h2>
+                <ul>
+                    <li><em>Columns</em>:
+                        <ol><li>Date (must be a date field in Excel)</li>
+                        <li>Journal code</li>
+                        <li>Account code</li>
+                        <li>Partner internal reference</li>
+                        <li>Analytic account code</li>
+                        <li>Label</li>
+                        <li>Debit</li>
+                        <li>Credit</li>
+                        <li>Ref (used as Journal Entry Ref)</li>
+                        <li>Reconcile ref (used for reconciliation after import)</li>
+                        </ol></li>
+                  </ul>
             </div>
+
             <footer>
-                <button name="run_import" type="object" string="Run Import" class="oe_highlight" />
-                <button special="cancel" string="Cancel" class="oe_link"/>
+                <button name="run_import" type="object" string="Run Import" class="btn-primary" />
+                <button special="cancel" string="Cancel"/>
             </footer>
         </form>
     </field>
