@@ -22,7 +22,11 @@ GENERIC_CSV_DEFAULT_DATE = '%d/%m/%Y'
 class AccountMoveImport(models.TransientModel):
     _name = "account.move.import"
     _description = "Import account move from CSV file"
+    _check_company_auto = True
 
+    company_id = fields.Many2one(
+        'res.company', string='Company',
+        required=True, default=lambda self: self.env.company)
     file_to_import = fields.Binary(
         string='File to Import', required=True,
         help="File containing the journal entry(ies) to import.")
@@ -43,6 +47,7 @@ class AccountMoveImport(models.TransientModel):
         help="If True, the journal entry will be posted after the import.")
     force_journal_id = fields.Many2one(
         'account.journal', string="Force Journal",
+        domain="[('company_id', '=', company_id)]", check_company=True,
         help="Journal in which the journal entry will be created, "
         "even if the file indicate another journal.")
     force_move_ref = fields.Char('Force Reference')
@@ -120,6 +125,7 @@ class AccountMoveImport(models.TransientModel):
     #    'ref: 'X12',
     #    'reconcile_ref': 'A1242',  # will be written in import_reconcile
     #                               # and be processed after move line creation
+    #    'analytic_tags': 'B12,B13,B14',
     #    'line': 2,  # Line number for error messages.
     #                # Must be the line number including headers
     # },
@@ -378,20 +384,20 @@ class AccountMoveImport(models.TransientModel):
             if len(row) < 8:
                 continue
             vals = {
+                'date': row[0].value,
                 'journal': row[1].value,
                 'account': str(row[2].value),
-                'credit': row[7].value,
-                'debit': row[6].value,
-                'date': row[0].value,
+                'partner': row[3].value or False,
+                'analytic': row[4].value or False,
                 'name': row[5].value,
+                'debit': row[6].value,
+                'credit': row[7].value,
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
+                'analytic_tags': len(row) > 10 and row[10].value or '',
                 'line': i,
                 }
-            if row[4].value:
-                vals['analytic'] = row[4].value
-            if row[3].value:
-                vals['partner'] = row[3].value
+
             res.append(vals)
         return res
 
@@ -485,9 +491,8 @@ class AccountMoveImport(models.TransientModel):
             res.append(vals)
         return res
 
-    def _partner_speed_dict(self):
-        partner_speed_dict = {}
-        company_id = self.env.company.id
+    def _prepare_partner_speeddict(self, company_id):
+        speeddict = {}
         partner_sr = self.env['res.partner'].search_read(
             [
                 '|',
@@ -498,37 +503,49 @@ class AccountMoveImport(models.TransientModel):
             ],
             ['ref'])
         for l in partner_sr:
-            partner_speed_dict[l['ref'].upper()] = l['id']
-        return partner_speed_dict
+            speeddict[l['ref'].upper()] = l['id']
+        return speeddict
 
-    def create_moves_from_pivot(self, pivot, post=False):
-        logger.debug('Final pivot: %s', pivot)
-        amo = self.env['account.move']
-        company_id = self.env.company.id
-        # Generate SPEED DICTS
-        acc_speed_dict = {}
+    def _prepare_speeddict(self, company_id):
+        speeddict = {
+            "partner": self._prepare_partner_speeddict(company_id),
+            "journal": {},
+            "account": {},
+            "analytic": {},
+            "analytic_tag": {},
+            }
         acc_sr = self.env['account.account'].search_read([
             ('company_id', '=', company_id),
             ('deprecated', '=', False)], ['code'])
         for l in acc_sr:
-            acc_speed_dict[l['code'].upper()] = l['id']
-        aacc_speed_dict = {}
+            speeddict['account'][l['code'].upper()] = l['id']
         aacc_sr = self.env['account.analytic.account'].search_read(
             [('company_id', '=', company_id), ('code', '!=', False)],
             ['code'])
         for l in aacc_sr:
-            aacc_speed_dict[l['code'].upper()] = l['id']
-        journal_speed_dict = {}
+            speeddict['analytic'][l['code'].upper()] = l['id']
+        anatag_sr = self.env['account.analytic.tag'].search_read(
+            ['|', ('company_id', '=', False), ('company_id', '=', company_id)],
+            ['name'])
+        for tag in anatag_sr:
+            speeddict['analytic_tag'][tag['name'].upper()] = tag['id']
         journal_sr = self.env['account.journal'].search_read([
             ('company_id', '=', company_id)], ['code'])
         for l in journal_sr:
-            journal_speed_dict[l['code'].upper()] = l['id']
-        partner_speed_dict = self._partner_speed_dict()
+            speeddict['journal'][l['code'].upper()] = l['id']
+        return speeddict
+
+    def create_moves_from_pivot(self, pivot, post=False):
+        logger.debug('Final pivot: %s', pivot)
+        amo = self.env['account.move']
+        company_id = self.company_id.id
+        speeddict = self._prepare_speeddict(company_id)
         key2label = {
             'journal': _('journal codes'),
             'account': _('account codes'),
             'partner': _('partner reference'),
             'analytic': _('analytic codes'),
+            'analytic_tag': _('analytic tags'),
             }
         errors = {'other': []}
         for key in key2label.keys():
@@ -537,19 +554,19 @@ class AccountMoveImport(models.TransientModel):
         for l in pivot:
             assert l.get('line') and isinstance(l.get('line'), int),\
                 'missing line number'
-            if l['account'] in acc_speed_dict:
-                l['account_id'] = acc_speed_dict[l['account']]
+            if l['account'] in speeddict['account']:
+                l['account_id'] = speeddict['account'][l['account']]
             if not l.get('account_id'):
                 # Match when import = 61100000 and Odoo has 611000
                 acc_code_tmp = l['account']
                 while acc_code_tmp and acc_code_tmp[-1] == '0':
                     acc_code_tmp = acc_code_tmp[:-1]
-                    if acc_code_tmp and acc_code_tmp in acc_speed_dict:
-                        l['account_id'] = acc_speed_dict[acc_code_tmp]
+                    if acc_code_tmp and acc_code_tmp in speeddict['account']:
+                        l['account_id'] = speeddict['account'][acc_code_tmp]
                         break
             if not l.get('account_id'):
                 # Match when import = 611000 and Odoo has 611000XX
-                for code, account_id in acc_speed_dict.items():
+                for code, account_id in speeddict['account'].items():
                     if code.startswith(l['account']):
                         logger.warning(
                             "Approximate match: import account %s has been matched "
@@ -559,21 +576,30 @@ class AccountMoveImport(models.TransientModel):
             if not l.get('account_id'):
                 errors['account'].setdefault(l['account'], []).append(l['line'])
             if l.get('partner'):
-                if l['partner'] in partner_speed_dict:
-                    l['partner_id'] = partner_speed_dict[l['partner']]
+                if l['partner'] in speeddict['partner']:
+                    l['partner_id'] = speeddict['partner'][l['partner']]
                 else:
                     errors['partner'].setdefault(l['partner'], []).append(l['line'])
             if l.get('analytic'):
-                if l['analytic'] in aacc_speed_dict:
-                    l['analytic_account_id'] = aacc_speed_dict[l['analytic']]
+                if l['analytic'] in speeddict['analytic']:
+                    l['analytic_account_id'] = speeddict['analytic'][l['analytic']]
                 else:
                     errors['analytic'].setdefault(l['analytic'], []).append(l['line'])
-            if l['journal'] in journal_speed_dict:
-                l['journal_id'] = journal_speed_dict[l['journal']]
+            if l.get('analytic_tags'):
+                # split by coma and strip
+                l['analytic_tag_ids'] = []
+                for rawtag in l['analytic_tags'].split(','):
+                    tag = rawtag and rawtag.strip() or False
+                    if tag:
+                        if tag in speeddict['analytic_tag']:
+                            l['analytic_tag_ids'].append(speeddict['analytic_tag'][tag])
+                        else:
+                            errors['analytic_tag'].setdefault(tag, []).append(l['line'])
+
+            if l['journal'] in speeddict['journal']:
+                l['journal_id'] = speeddict['journal'][l['journal']]
             else:
                 errors['journal'].setdefault(l['journal'], []).append(l['line'])
-            if not l.get('name'):
-                errors['other'].append(_('Line %d: missing label.') % l['line'])
             if not l.get('date'):
                 errors['other'].append(_(
                     'Line %d: missing date.') % l['line'])
@@ -584,11 +610,11 @@ class AccountMoveImport(models.TransientModel):
                     except Exception:
                         errors['other'].append(_(
                             'Line %d: bad date format %s') % (l['line'], l['date']))
-            if not isinstance(l.get('credit'), float):
+            if not isinstance(l.get('credit'), (float, int)):
                 errors['other'].append(_(
                     'Line %d: bad value for credit (%s).')
                     % (l['line'], l['credit']))
-            if not isinstance(l.get('debit'), float):
+            if not isinstance(l.get('debit'), (float, int)):
                 errors['other'].append(_(
                     'Line %d: bad value for debit (%s).')
                     % (l['line'], l['debit']))
@@ -613,7 +639,7 @@ class AccountMoveImport(models.TransientModel):
         cur_ref = False
         cur_date = False
         cur_balance = 0.0
-        comp_cur = self.env.company.currency_id
+        comp_cur = self.company_id.currency_id
         seq = self.env['ir.sequence'].next_by_code('account.move.import')
         cur_move = {}
         for l in pivot:
@@ -673,6 +699,7 @@ class AccountMoveImport(models.TransientModel):
         return vals
 
     def _prepare_move_line(self, pivot_line, sequence):
+        ana_tag_ids = pivot_line.get('analytic_tag_ids')
         vals = {
             'credit': pivot_line['credit'],
             'debit': pivot_line['debit'],
@@ -680,13 +707,14 @@ class AccountMoveImport(models.TransientModel):
             'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
             'analytic_account_id': pivot_line.get('analytic_account_id'),
+            'analytic_tag_ids': ana_tag_ids and [(6, 0, ana_tag_ids)] or False,
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': '%s-%s' % (sequence, pivot_line.get('line')),
             }
         return vals
 
     def reconcile_move_lines(self, moves):
-        comp_cur = self.env.company.currency_id
+        comp_cur = self.company_id.currency_id
         logger.info('Start to reconcile imported moves')
         lines = self.env['account.move.line'].search([
             ('move_id', 'in', moves.ids),

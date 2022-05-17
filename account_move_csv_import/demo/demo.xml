@@ -17,6 +17,18 @@
     <field name="code">SUPP</field>
 </record>
 
+<record id="analytic_tag_b2b" model="account.analytic.tag">
+    <field name="name">B2B</field>
+</record>
+
+<record id="analytic_tag_b2c" model="account.analytic.tag">
+    <field name="name">B2C</field>
+</record>
+
+<record id="analytic_tag_b2g" model="account.analytic.tag">
+    <field name="name">B2G</field>
+</record>
+
 <record id="partner_import1" model="res.partner">
     <field name="is_company" eval="True"/>
     <field name="name">Camembert en folie</field>

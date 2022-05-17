@@ -18,6 +18,7 @@
                 <field name="filename" invisible="1"/>
                 <field name="file_format" />
                 <field name="file_encoding" attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra'))]}"/>
+                <field name="company_id" groups="base.group_multi_company"/>
                 <field name="post_move" />
                 <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
                 <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
@@ -57,21 +58,20 @@
                   </ul>
               </div>
             <div name="info-xlsx" attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}">
-                <h2>Information about the Generic XLSX format</h2>
-                <ul>
-                    <li><em>Columns</em>:
-                        <ol><li>Date (must be a date field in Excel)</li>
-                        <li>Journal code</li>
-                        <li>Account code</li>
-                        <li>Partner internal reference</li>
-                        <li>Analytic account code</li>
-                        <li>Label</li>
-                        <li>Debit</li>
-                        <li>Credit</li>
-                        <li>Ref (used as Journal Entry Ref)</li>
-                        <li>Reconcile ref (used for reconciliation after import)</li>
-                        </ol></li>
-                  </ul>
+                <h3>Columns of the Generic XLSX format</h3>
+                    <p>
+                    A. Date (must be a date field in Excel)<br/>
+                    B. Journal code<br/>
+                    C. Account code<br/>
+                    D. Partner internal reference<br/>
+                    E. Analytic account code<br/>
+                    F. Label<br/>
+                    G. Debit<br/>
+                    H. Credit<br/>
+                    I. Ref (used as Journal Entry Ref)<br/>
+                    J. Reconcile ref (used for reconciliation after import)<br/>
+                    K. Analytic tags (separated by coma)<br/>
+                </p>
             </div>
 
             <footer>
