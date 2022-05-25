@@ -217,7 +217,9 @@ class AccountMoveImport(models.TransientModel):
             delimiter=',',
             quotechar='"',
             quoting=unicodecsv.QUOTE_MINIMAL,
-            encoding='utf-8')
+            encoding='utf-8-sig')
+        # I use utf-8-sig instead of utf-8 to transparently handle BOM
+        # https://en.wikipedia.org/wiki/Byte_order_mark
         res = []
         i = 0
         for l in reader:
