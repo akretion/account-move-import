@@ -61,16 +61,16 @@
                 <h3>Columns of the Generic XLSX format</h3>
                     <p>
                     A. Date (must be a date field in Excel)<br/>
-                    B. Journal code<br/>
-                    C. Account code<br/>
-                    D. Partner internal reference<br/>
-                    E. Analytic account code<br/>
+                    B. Journal Code<br/>
+                    C. Account Code<br/>
+                    D. Partner Reference<br/>
+                    E. Analytic Account Reference<br/>
                     F. Label<br/>
                     G. Debit<br/>
                     H. Credit<br/>
                     I. Ref (used as Journal Entry Ref)<br/>
-                    J. Reconcile ref (used for reconciliation after import)<br/>
-                    K. Analytic tags (separated by coma)<br/>
+                    J. Reconcile Ref (used for reconciliation after import)<br/>
+                    K. Analytic Tags (separated by coma)<br/>
                 </p>
             </div>
 
