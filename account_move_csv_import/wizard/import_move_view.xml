@@ -36,8 +36,9 @@
             <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
                 <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
                 <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
+                <field name="split_move_method"/>
                 <field name="keep_odoo_move_name"/>
-                <field name="date_by_move_line"/>
+                <field name="date_by_move_line" attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"/>
                 <field name="skip_null_lines"/>
             </group>
             <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
