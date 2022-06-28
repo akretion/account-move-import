@@ -27,14 +27,18 @@
                 <field name="force_journal_required" invisible="1"/>
                 <field name="force_move_date_required" invisible="1"/>
                 <field name="force_move_line_name_required" invisible="1"/>
-                <field name="advanced_options"/>
+                <field name="advanced_options" invisible="1"/>
+            </group>
+            <group name="button_advanced_options" col="1">
+                <button name="button_show_advanced_options" type="object" attrs="{'invisible': [('advanced_options', '=', True)]}" string="Show Advanced Options"/>
+                <button name="button_hide_advanced_options" attrs="{'invisible': [('advanced_options', '=', False)]}" type="object" string="Hide Advanced Options"/>
             </group>
             <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
                 <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
                 <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
-                <field name="move_ref_unique"/>
-                <field name="force_move_number" attrs="{'invisible': [('move_ref_unique', '!=', True)]}"/>
+                <field name="keep_odoo_move_name"/>
                 <field name="date_by_move_line"/>
+                <field name="skip_null_lines"/>
             </group>
             <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
                 <h2>Information about the Generic CSV format</h2>
