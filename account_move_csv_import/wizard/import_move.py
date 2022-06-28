@@ -403,7 +403,6 @@ class AccountMoveImport(models.TransientModel):
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
                 'analytic_tags': len(row) > 10 and row[10].value or '',
-                'move_name': len(row) > 11 and row[11].value or '',
                 'line': i,
                 }
 
