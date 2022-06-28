@@ -524,11 +524,18 @@ class AccountMoveImport(models.TransientModel):
             ['code'])
         for l in aacc_sr:
             speeddict['analytic'][l['code'].upper()] = l['id']
-        anatag_sr = self.env['account.analytic.tag'].search_read(
-            ['|', ('company_id', '=', False), ('company_id', '=', company_id)],
-            ['name'])
-        for tag in anatag_sr:
-            speeddict['analytic_tag'][tag['name'].upper()] = tag['id']
+        # By default, read access on account.analytic.tag
+        # is only granted if the user is in the group 'Analytic Tags'
+        if self.env.user.has_group('analytic.group_analytic_tags'):
+            anatag_sr = self.env['account.analytic.tag'].search_read(
+                ['|', ('company_id', '=', False), ('company_id', '=', company_id)],
+                ['name'])
+            for tag in anatag_sr:
+                speeddict['analytic_tag'][tag['name'].upper()] = tag['id']
+        else:
+            # Designed to trigger an error during import if analytic tags
+            # are used in the input file
+            speeddict["analytic_tag_no_access"] = True
         journal_sr = self.env['account.journal'].search_read([
             ('company_id', '=', company_id)], ['code'])
         for l in journal_sr:
@@ -586,6 +593,11 @@ class AccountMoveImport(models.TransientModel):
                 else:
                     errors['analytic'].setdefault(l['analytic'], []).append(l['line'])
             if l.get('analytic_tags'):
+                if speeddict.get("analytic_tag_no_access"):
+                    raise UserError(_(
+                        "You are trying to import analytic tag(s) (line %d), "
+                        "but you are not part of the group "
+                        "'Analytic Accounting Tags'.") % l['line'])
                 # split by coma and strip
                 l['analytic_tag_ids'] = []
                 for rawtag in l['analytic_tags'].split(','):
