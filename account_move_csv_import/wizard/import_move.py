@@ -39,6 +39,7 @@ class AccountMoveImport(models.TransientModel):
         ('extenso', 'In Extenso'),
         ('cielpaye', 'Ciel Paye'),
         ('payfit', 'Payfit'),
+        ('cpt195_txt', 'CPT195 (text)'),
         ], string='File Format', required=True, default='genericxlsx')
     post_move = fields.Boolean(
         string='Post Journal Entry',
@@ -154,6 +155,8 @@ class AccountMoveImport(models.TransientModel):
             return self.cielpaye2pivot(fileobj)
         elif file_format == 'fec_txt':
             return self.fectxt2pivot(fileobj)
+        elif file_format == 'cpt195_txt':
+            return self.cpt195txt2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -494,6 +497,39 @@ class AccountMoveImport(models.TransientModel):
                 "line": i,
             }
             res.append(vals)
+        return res
+
+    def cpt195txt2pivot(self, fileobj):
+        res = []
+        i = 0
+        file_content = base64.decodebytes(self.file_to_import)
+        file_content = file_content.decode("latin1")
+        file_lines = file_content[:-4].split("\r\n")
+        for line in file_lines:
+            i += 1
+            # Skip line that is not a detail of the account
+            if line[21] != 'D':
+                continue
+            vals = {
+                'journal': line[16:19],
+                'account': line[24:36],
+                'date': datetime.strptime(line[22:24] + line[12:14] + line[158:160] + line[14:16], '%d%m%Y'),
+                'name': line[80:100],
+                'ref': line[140:143],
+                'line': i,
+            }
+            if float(line[67:80]) != 0.0 and float(line[54:67]) != 0.0:
+                vals_credit = vals_debit = vals
+                vals_debit['credit'] = 0.0
+                vals_debit['debit'] = float(line[54:65] + '.' + line[65:67])
+                res.append(vals_debit)
+                vals_credit['credit'] = float(line[67:78] + '.' + line[78:80])
+                vals_credit['debit'] = 0.0
+                res.append(vals_credit)
+            else:
+                vals['debit'] = float(line[54:65] + '.' + line[65:67])
+                vals['credit'] = float(line[67:78] + '.' + line[78:80])
+                res.append(vals)
         return res
 
     def _prepare_partner_speeddict(self, company_id):

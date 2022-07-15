@@ -26,7 +26,8 @@ This module currently supports:
 * In Extenso,
 * Ciel paye,
 * Payfit,
-* FEC (text format).
+* FEC (text format),
+* CPT195 (text format).
 
 This module can easily be extended to support other formats.
 
