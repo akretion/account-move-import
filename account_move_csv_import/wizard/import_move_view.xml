@@ -80,7 +80,7 @@
             </div>
 
             <footer>
-                <button name="run_import" type="object" string="Run Import" class="btn-primary" />
+                <button name="run_import" type="object" string="Import" class="btn-primary" />
                 <button special="cancel" string="Cancel"/>
             </footer>
         </form>
