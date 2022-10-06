@@ -386,6 +386,9 @@ class AccountMoveImport(models.TransientModel):
                 continue
             if len(row) < 8:
                 continue
+            if not [item for item in row if item.value]:
+                # skip empty line
+                continue
             vals = {
                 'date': row[0].value,
                 'journal': row[1].value,
@@ -400,7 +403,6 @@ class AccountMoveImport(models.TransientModel):
                 'analytic_tags': len(row) > 10 and row[10].value or '',
                 'line': i,
                 }
-
             res.append(vals)
         return res
 
