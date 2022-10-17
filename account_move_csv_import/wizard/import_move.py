@@ -696,6 +696,7 @@ class AccountMoveImport(models.TransientModel):
                 cur_date = l['date']
                 cur_move_name = move_name
                 cur_journal_id = l['journal_id']
+                cur_balance = 0.0
             cur_balance += l['credit'] - l['debit']
         if cur_move:
             moves.append(cur_move)
