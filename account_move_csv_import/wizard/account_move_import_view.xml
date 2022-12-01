@@ -64,10 +64,10 @@
                         </ol></li>
                   </ul>
               </div>
-            <div name="info-xlsx" attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}">
-                <h3>Columns of the Generic XLSX format</h3>
+            <div name="info-xlsx" attrs="{'invisible': [('file_format', '=', 'genericxlsx')]}">
+                <h3>Columns of the Generic XLSX/XLS/ODS format</h3>
                     <p>
-                    A. Date (must be a date field in Excel)<br/>
+                    A. Date (must be a date field in the spreadsheet)<br/>
                     B. Journal Code<br/>
                     C. Account Code<br/>
                     D. Partner Reference<br/>

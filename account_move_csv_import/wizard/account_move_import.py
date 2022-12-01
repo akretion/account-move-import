@@ -1,20 +1,33 @@
-# Copyright 2012-2020 Akretion France (http://www.akretion.com)
+# Copyright 2012-2022 Akretion France (http://www.akretion.com)
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools.mimetypes import guess_mimetype
 from datetime import datetime, date as datelib
 import unicodecsv
 from tempfile import NamedTemporaryFile
+from collections import OrderedDict
 import base64
 import logging
 
 logger = logging.getLogger(__name__)
 try:
-    import openpyxl
+    import openpyxl  # for XLSX
 except ImportError:
     logger.debug('Cannot import openpyxl')
+try:
+    import xlrd  # for XLS
+except ImportError:
+    logger.debug('Cannot import xlrd')
+try:
+    import rows  # for ODS... but could be later used for XLS, XLSX, CSV
+    # But they must make a new release first https://github.com/turicas/rows/issues/368
+except ImportError:
+    rows = None
+    logger.debug('Cannot import rows')
+
 
 GENERIC_CSV_DEFAULT_DATE = '%d/%m/%Y'
 
@@ -30,7 +43,7 @@ class AccountMoveImport(models.TransientModel):
     file_to_import = fields.Binary(string='File to Import')
     filename = fields.Char()
     file_format = fields.Selection([
-        ('genericxlsx', 'Generic XLSX'),
+        ('genericxlsx', 'Generic XLSX/XLS/ODS'),
         ('genericcsv', 'Generic CSV'),
         ('fec_txt', 'FEC (text)'),
         ('nibelis', 'Nibelis (Prisme)'),
@@ -142,7 +155,7 @@ class AccountMoveImport(models.TransientModel):
         elif file_format == 'genericcsv':
             return self.genericcsv2pivot(fileobj)
         elif file_format == 'genericxlsx':
-            return self.genericxlsx2pivot(fileobj)
+            return self.genericxlsx_autodetect(fileobj, file_bytes)
         elif file_format == 'quadra':
             return self.quadra2pivot(file_bytes)
         elif file_format == 'extenso':
@@ -173,6 +186,8 @@ class AccountMoveImport(models.TransientModel):
         self.reconcile_move_lines(moves)
         action = self.env["ir.actions.actions"]._for_xml_id(
             "account.action_move_journal_line")
+        # We need to remove from context 'search_default_posted': 1
+        action['context'] = {'default_move_type': 'entry', 'view_no_maturity': True}
         if len(moves) == 1:
             action.update({
                 'view_mode': 'form,tree',
@@ -376,6 +391,17 @@ class AccountMoveImport(models.TransientModel):
             res.append(vals)
         return res
 
+    def genericxlsx_autodetect(self, fileobj, file_bytes):
+        mime_res = guess_mimetype(file_bytes)
+        if mime_res == 'application/vnd.oasis.opendocument.spreadsheet':  # ODS
+            return self.genericods2pivot(fileobj)
+        elif mime_res == 'application/vnd.ms-excel':  # XLS
+            return self.genericxls2pivot(fileobj)
+        elif mime_res == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':  # XLSX
+            return self.genericxlsx2pivot(fileobj)
+        else:
+            raise UserError(_("Are you sure this file is an XLSX, XLS or ODS file?"))
+
     def genericxlsx2pivot(self, fileobj):
         wb = openpyxl.load_workbook(fileobj.name, read_only=True)
         sh = wb.active
@@ -401,6 +427,89 @@ class AccountMoveImport(models.TransientModel):
                 'credit': row[7].value,
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
+                'line': i,
+                }
+            res.append(vals)
+        return res
+
+    def genericxls2pivot(self, fileobj):
+        wb = xlrd.open_workbook(fileobj.name)
+        sh = wb.sheet_by_index(0)
+        res = []
+        i = 0
+        for row_int in range(sh.nrows):
+            row = sh.row(row_int)
+            i += 1
+            if i == 1 and self.file_with_header:
+                continue
+            if len(row) < 8:
+                continue
+            if not [item for item in row if item.value]:
+                # skip empty line
+                continue
+            account = row[2].value
+            if isinstance(account, float):
+                account = str(int(account))
+            elif isinstance(account, int):
+                account = str(account)
+            vals = {
+                'date': datetime(*xlrd.xldate_as_tuple(row[0].value, wb.datemode)),
+                'journal': row[1].value,
+                'account': account,
+                'partner': row[3].value or False,
+                'analytic': row[4].value or False,
+                'name': row[5].value,
+                'debit': row[6].value,
+                'credit': row[7].value,
+                'ref': len(row) > 8 and row[8].value or '',
+                'reconcile_ref': len(row) > 9 and row[9].value or '',
+                'line': i,
+                }
+            res.append(vals)
+        return res
+
+    def genericods2pivot(self, fileobj):
+        if rows is None:
+            raise UserError(_(
+                "To import ods files, you must install the rows lib from "
+                "https://github.com/turicas/rows"))
+        if rows.__version__ <= '0.4.1':
+            raise UserError(_(
+                "Python lib 'rows' 0.4.1 is buggy. "
+                "You should checkout the code from https://github.com/turicas/rows"))
+        fields_ods = OrderedDict([
+            ('date', rows.fields.DateField),
+            ('journal', rows.fields.TextField),
+            ('account', rows.fields.TextField),
+            ('partner', rows.fields.TextField),
+            ('analytic', rows.fields.TextField),
+            ('name', rows.fields.TextField),
+            ('debit', rows.fields.FloatField),
+            ('credit', rows.fields.FloatField),
+            ('ref', rows.fields.TextField),
+            ('reconcile_ref', rows.fields.TextField),
+            ])
+
+        sh = rows.import_from_ods(fileobj.name, fields=fields_ods, skip_header=False)
+
+        res = []
+        i = 0
+        for row in sh:
+            # the rows lib automatically skips empty lines
+            i += 1
+            if i == 1 and self.file_with_header:
+                continue
+            vals = {
+                'date': row.date,
+                'journal': row.journal,
+                'account': row.account,
+                'partner': row.partner,
+                'analytic': row.analytic,
+                'name': row.name,
+                'debit': row.debit,
+                'credit': row.credit,
+                'ref': row.ref,
+                'reconcile_ref': row.reconcile_ref,
                 'line': i,
                 }
             res.append(vals)
