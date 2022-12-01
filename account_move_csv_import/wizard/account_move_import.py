@@ -27,8 +27,7 @@ class AccountMoveImport(models.TransientModel):
     company_id = fields.Many2one(
         'res.company', string='Company',
         required=True, default=lambda self: self.env.company)
-    file_to_import = fields.Binary(
-        string='File to Import', required=True)
+    file_to_import = fields.Binary(string='File to Import')
     filename = fields.Char()
     file_format = fields.Selection([
         ('genericxlsx', 'Generic XLSX'),
@@ -115,7 +114,8 @@ class AccountMoveImport(models.TransientModel):
     # PIVOT FORMAT
     # [{
     #    'account': '411000',
-    #    'analytic': 'ADM',  # analytic account code
+    #    'analytic': 'ADM',  # analytic account code (100% distribution)
+    # OR 'analytic': 'ADM:39.4,SUPP:60.6',  # analytic distribution
     #    'partner': 'R1242',
     #    'name': 'label',  # optional, for account.move.line
     #    'credit': 12.42,
@@ -128,7 +128,6 @@ class AccountMoveImport(models.TransientModel):
     #                                  # only used when keep_odoo_move_name = False
     #    'reconcile_ref': 'A1242',  # will be written in import_reconcile
     #                               # and be processed after move line creation
-    #    'analytic_tags': 'B12,B13,B14',
     #    'line': 2,  # Line number for error messages.
     #                # Must be the line number including headers
     # },
@@ -159,6 +158,8 @@ class AccountMoveImport(models.TransientModel):
 
     def run_import(self):
         self.ensure_one()
+        if not self.file_to_import:
+            raise UserError(_("You must upload a file to import."))
         fileobj = NamedTemporaryFile('wb+', prefix='odoo-move_import-', suffix='.xlsx')
         file_bytes = base64.b64decode(self.file_to_import)
         fileobj.write(file_bytes)
@@ -400,7 +401,6 @@ class AccountMoveImport(models.TransientModel):
                 'credit': row[7].value,
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
-                'analytic_tags': len(row) > 10 and row[10].value or '',
                 'line': i,
                 }
             res.append(vals)
@@ -517,7 +517,6 @@ class AccountMoveImport(models.TransientModel):
             "journal": {},
             "account": {},
             "analytic": {},
-            "analytic_tag": {},
             }
         acc_sr = self.env['account.account'].search_read([
             ('company_id', '=', company_id),
@@ -529,18 +528,6 @@ class AccountMoveImport(models.TransientModel):
             ['code'])
         for l in aacc_sr:
             speeddict['analytic'][l['code'].upper()] = l['id']
-        # By default, read access on account.analytic.tag
-        # is only granted if the user is in the group 'Analytic Tags'
-        if self.env.user.has_group('analytic.group_analytic_tags'):
-            anatag_sr = self.env['account.analytic.tag'].search_read(
-                ['|', ('company_id', '=', False), ('company_id', '=', company_id)],
-                ['name'])
-            for tag in anatag_sr:
-                speeddict['analytic_tag'][tag['name'].upper()] = tag['id']
-        else:
-            # Designed to trigger an error during import if analytic tags
-            # are used in the input file
-            speeddict["analytic_tag_no_access"] = True
         journal_sr = self.env['account.journal'].search_read([
             ('company_id', '=', company_id)], ['code'])
         for l in journal_sr:
@@ -557,7 +544,6 @@ class AccountMoveImport(models.TransientModel):
             'account': _('account codes'),
             'partner': _('partner reference'),
             'analytic': _('analytic codes'),
-            'analytic_tag': _('analytic tags'),
             }
         errors = {'other': []}
         for key in key2label.keys():
@@ -593,25 +579,29 @@ class AccountMoveImport(models.TransientModel):
                 else:
                     errors['partner'].setdefault(l['partner'], []).append(l['line'])
             if l.get('analytic'):
-                if l['analytic'] in speeddict['analytic']:
-                    l['analytic_account_id'] = speeddict['analytic'][l['analytic']]
-                else:
-                    errors['analytic'].setdefault(l['analytic'], []).append(l['line'])
-            if l.get('analytic_tags'):
-                if speeddict.get("analytic_tag_no_access"):
-                    raise UserError(_(
-                        "You are trying to import analytic tag(s) (line %d), "
-                        "but you are not part of the group "
-                        "'Analytic Accounting Tags'.") % l['line'])
-                # split by coma and strip
-                l['analytic_tag_ids'] = []
-                for rawtag in l['analytic_tags'].split(','):
-                    tag = rawtag and rawtag.strip() or False
-                    if tag:
-                        if tag in speeddict['analytic_tag']:
-                            l['analytic_tag_ids'].append(speeddict['analytic_tag'][tag])
+                l['analytic_distribution'] = {}
+                for ana_entry in l['analytic'].split('|'):
+                    ana_entry = ana_entry.strip()
+                    if ana_entry:
+                        ana_entry_split = ana_entry.split(':')
+                        if len(ana_entry_split) == 1:
+                            ana_account_code = ana_entry_split[0].strip()
+                            ana_pct = 100
+                        elif len(ana_entry_split) > 1:
+                            ana_account_code = ':'.join(ana_entry_split[:-1]).strip()
+                            ana_pct_str = ana_entry_split[-1]
+                            ana_pct_str_ready = ana_pct_str.replace(',', '.')
+                            try:
+                                ana_pct = float(ana_pct_str_ready)
+                            except Exception:
+                                errors['other'].append("Line %d: wrong analytic percentage: '%s' is not a number." % (l['line'], ana_pct_str))
+                                ana_pct = 1
+                            if ana_pct < 0 or ana_pct > 100:
+                                errors['other'].append("Line %d: wrong analytic percentage: '%s' is not between 0 and 100." % (l['line'], ana_pct_str))
+                        if ana_account_code in speeddict['analytic']:
+                            l['analytic_distribution'][speeddict['analytic'][ana_account_code]] = ana_pct
                         else:
-                            errors['analytic_tag'].setdefault(tag, []).append(l['line'])
+                            errors['analytic'].setdefault(ana_account_code, []).append(l['line'])
 
             if l['journal'] in speeddict['journal']:
                 l['journal_id'] = speeddict['journal'][l['journal']]
@@ -724,15 +714,13 @@ class AccountMoveImport(models.TransientModel):
         return vals
 
     def _prepare_move_line(self, pivot_line, sequence):
-        ana_tag_ids = pivot_line.get('analytic_tag_ids')
         vals = {
             'credit': pivot_line['credit'],
             'debit': pivot_line['debit'],
             'name': pivot_line['name'],
             'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
-            'analytic_account_id': pivot_line.get('analytic_account_id'),
-            'analytic_tag_ids': ana_tag_ids and [(6, 0, ana_tag_ids)] or False,
+            'analytic_distribution': pivot_line.get('analytic_distribution'),
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': '%s-%s' % (sequence, pivot_line.get('line')),
             }

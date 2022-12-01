@@ -52,7 +52,7 @@ from Akretion (alexis.delattre@akretion.com).
     'data': [
         'data/sequence.xml',
         'security/ir.model.access.csv',
-        'wizard/import_move_view.xml',
+        'wizard/account_move_import_view.xml',
     ],
     'installable': True,
 }

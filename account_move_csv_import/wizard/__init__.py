@@ -1,1 +1,1 @@
-from . import import_move
+from . import account_move_import
