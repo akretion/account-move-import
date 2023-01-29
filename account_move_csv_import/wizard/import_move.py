@@ -507,28 +507,35 @@ class AccountMoveImport(models.TransientModel):
         file_lines = file_content[:-4].split("\r\n")
         for line in file_lines:
             i += 1
+            # Skip empty line
+            if not line:
+                continue
             # Skip line that is not a detail of the account
             if line[21] != 'D':
                 continue
             vals = {
                 'journal': line[16:19],
                 'account': line[24:36],
-                'date': datetime.strptime(line[22:24] + line[12:14] + line[158:160] + line[14:16], '%d%m%Y'),
+                "analytic": line[36:38] != "99" and line[36:38],
+                'date': datelib(
+                    year=int(line[158:160] + line[14:16]),
+                    month=int(line[12:14]),
+                    day=int(line[22:24]),
+                    ),
                 'name': line[80:100],
                 'ref': line[140:143],
                 'line': i,
             }
-            if float(line[67:80]) != 0.0 and float(line[54:67]) != 0.0:
-                vals_credit = vals_debit = vals
-                vals_debit['credit'] = 0.0
-                vals_debit['debit'] = float(line[54:65] + '.' + line[65:67])
-                res.append(vals_debit)
-                vals_credit['credit'] = float(line[67:78] + '.' + line[78:80])
-                vals_credit['debit'] = 0.0
-                res.append(vals_credit)
+            credit = int(line[67:80]) / 100.
+            debit = int(line[54:67]) / 100.
+            if credit and debit:
+                vals.update({"credit": credit, "debit": 0})
+                res.append(vals)
+                vals2 = vals.copy()
+                vals2.update({"credit": 0, "debit": debit})
+                res.append(vals2)
             else:
-                vals['debit'] = float(line[54:65] + '.' + line[65:67])
-                vals['credit'] = float(line[67:78] + '.' + line[78:80])
+                vals.update({"credit": credit, "debit": debit})
                 res.append(vals)
         return res
 
