@@ -89,7 +89,7 @@
 </record>
 
 <record id="account_move_import_action" model="ir.actions.act_window">
-    <field name="name">Import Account Move</field>
+    <field name="name">Import Journal Entries</field>
     <field name="res_model">account.move.import</field>
     <field name="view_mode">form</field>
     <field name="target">new</field>
