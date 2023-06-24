@@ -50,6 +50,7 @@ This module has been written by Alexis de Lattre from Akretion (alexis.delattre@
         'security/account_move_import_map.xml',
         'views/account_move_import_map.xml',
         'wizard/import_move_view.xml',
+        'security/import_move_wizard.xml',
     ],
     'installable': True,
 }
