@@ -291,7 +291,7 @@ class AccountMoveImport(models.TransientModel):
         fieldnames = [
             'journal',        # JournalCode
             False,            # JournalLib
-            False,            # EcritureNum
+            'move_name',      # EcritureNum
             'date',           # EcritureDate
             'account',        # CompteNum
             False,            # CompteLib
@@ -327,6 +327,7 @@ class AccountMoveImport(models.TransientModel):
             l['debit'] = l['debit'] or '0'
             vals = {
                 'journal': l['journal'],
+                'move_name': l['move_name'],
                 'account': l['account'],
                 'partner': l['partner_ref'],
                 'credit': float(l['credit'].replace(',', '.')),
