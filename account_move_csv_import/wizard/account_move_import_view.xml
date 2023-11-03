@@ -14,21 +14,20 @@
     <field name="arch" type="xml">
         <form string="Import Account Move">
             <group name="main">
+                <field name="company_id" invisible="1"/>
+                <field name="company_id" groups="base.group_multi_company"/>
                 <field name="file_to_import" filename="filename"/>
                 <field name="filename" invisible="1"/>
                 <field name="file_format" />
+                <field name="post_move" />
                 <field name="file_encoding" attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra'))]}"/>
                 <!-- In v16, I also need to have a company_id field without group, to make the domain on force_journal_id work -->
-                <field name="company_id" invisible="1"/>
-                <field name="company_id" groups="base.group_multi_company"/>
-                <field name="post_move" />
+                <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
                 <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
                 <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
                 <field name="force_move_ref" />
-                <field name="force_move_line_name" attrs="{'required': [('force_move_line_name_required', '=', True)]}"/>
                 <field name="force_journal_required" invisible="1"/>
                 <field name="force_move_date_required" invisible="1"/>
-                <field name="force_move_line_name_required" invisible="1"/>
                 <field name="advanced_options" invisible="1"/>
             </group>
             <group name="button_advanced_options">
@@ -37,11 +36,11 @@
             </group>
             <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
                 <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
-                <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
-                <field name="split_move_method"/>
+                <field name="split_move_method" widget="radio"/>
                 <field name="keep_odoo_move_name"/>
                 <field name="date_by_move_line" attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"/>
                 <field name="skip_null_lines"/>
+                <field name="force_move_line_name"/>
             </group>
             <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
                 <h2>Information about the Generic CSV format</h2>

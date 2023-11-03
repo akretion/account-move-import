@@ -69,9 +69,8 @@ class AccountMoveImport(models.TransientModel):
         ('utf-8', 'UTF-8'),
         ], string='File Encoding', default='utf-8')
     # technical fields
-    force_move_date_required = fields.Boolean('Force Date Required')
-    force_move_line_name_required = fields.Boolean('Force Label Required')
-    force_journal_required = fields.Boolean('Force Journal Required')
+    force_move_date_required = fields.Boolean(compute='_compute_force_required')
+    force_journal_required = fields.Boolean(compute='_compute_force_required')
     advanced_options = fields.Boolean()
     # START GENERIC advanced options
     date_by_move_line = fields.Boolean(
@@ -99,16 +98,16 @@ class AccountMoveImport(models.TransientModel):
         string='Has Header Line',
         help="Indicate if the first line is a header line and should be ignored.")
 
-    @api.onchange('file_format')
-    def file_format_change(self):
-        if self.file_format == 'payfit':
-            self.force_move_date_required = True
-            self.force_move_line_name_required = True
-            self.force_journal_required = True
-        else:
-            self.force_move_date_required = False
-            self.force_move_line_name_required = False
-            self.force_journal_required = False
+    @api.depends('file_format')
+    def _compute_force_required(self):
+        for wiz in self:
+            force_move_date_required = False
+            force_journal_required = False
+            if wiz.file_format == 'payfit':
+                force_move_date_required = True
+                force_journal_required = True
+            wiz.force_move_date_required = force_move_date_required
+            wiz.force_journal_required = force_journal_required
 
     def button_show_advanced_options(self):
         return self._set_advanced_options(True)
