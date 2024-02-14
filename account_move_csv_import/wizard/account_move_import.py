@@ -6,7 +6,7 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 from datetime import datetime, date as datelib
-import unicodecsv
+import csv
 from tempfile import NamedTemporaryFile
 from collections import OrderedDict
 import base64
@@ -30,6 +30,11 @@ except ImportError:
 
 
 GENERIC_CSV_DEFAULT_DATE = '%d/%m/%Y'
+DELIMITER = {
+    'coma': ',',
+    'semicolon': ';',
+    'tab': '\t',
+    }
 
 
 class AccountMoveImport(models.TransientModel):
@@ -68,6 +73,11 @@ class AccountMoveImport(models.TransientModel):
         ('latin1', 'ISO 8859-15 (alias Latin1)'),
         ('utf-8', 'UTF-8'),
         ], string='File Encoding', default='utf-8')
+    delimiter = fields.Selection([
+        ('coma', 'Coma'),
+        ('semicolon', 'Semicolon'),
+        ('tab', 'Tab'),
+        ], default='coma', string="Field Delimiter")
     # technical fields
     force_move_date_required = fields.Boolean(compute='_compute_force_required')
     force_journal_required = fields.Boolean(compute='_compute_force_required')
@@ -234,56 +244,56 @@ class AccountMoveImport(models.TransientModel):
         fieldnames = [
             'journal', 'date', False, 'account', False, False, False, False,
             'debit', 'credit']
-        reader = unicodecsv.DictReader(
-            fileobj,
-            fieldnames=fieldnames,
-            delimiter='\t',
-            quoting=unicodecsv.QUOTE_MINIMAL,
-            encoding='utf-8')
         res = []
-        i = 0
-        for l in reader:
-            i += 1
-            l['credit'] = l['credit'] or '0'
-            l['debit'] = l['debit'] or '0'
-            vals = {
-                'journal': l['journal'],
-                'account': l['account'],
-                'credit': float(l['credit'].replace(',', '.')),
-                'debit': float(l['debit'].replace(',', '.')),
-                'date': datetime.strptime(l['date'], '%d%m%Y'),
-                'line': i,
-            }
-            res.append(vals)
+        with open(fileobj.name, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(
+                f,
+                fieldnames=fieldnames,
+                delimiter='\t',
+                quoting=csv.QUOTE_MINIMAL)
+            i = 0
+            for l in reader:
+                i += 1
+                l['credit'] = l['credit'] or '0'
+                l['debit'] = l['debit'] or '0'
+                vals = {
+                    'journal': l['journal'],
+                    'account': l['account'],
+                    'credit': float(l['credit'].replace(',', '.')),
+                    'debit': float(l['debit'].replace(',', '.')),
+                    'date': datetime.strptime(l['date'], '%d%m%Y'),
+                    'line': i,
+                }
+                res.append(vals)
         return res
 
     def cielpaye2pivot(self, fileobj):
         fieldnames = [
             False, 'journal', 'date', 'account', False, 'amount', 'sign',
             False, 'name', False]
-        reader = unicodecsv.DictReader(
-            fileobj,
-            fieldnames=fieldnames,
-            delimiter='\t',
-            quoting=unicodecsv.QUOTE_MINIMAL,
-            encoding='utf-8')
         res = []
-        i = 0
-        for l in reader:
-            i += 1
-            # skip non-move lines
-            if l.get('date') and l.get('name') and l.get('amount'):
-                amount = float(l['amount'].replace(',', '.'))
-                vals = {
-                    'journal': l['journal'],
-                    'account': l['account'],
-                    'credit': l['sign'] == 'C' and amount or 0,
-                    'debit': l['sign'] == 'D' and amount or 0,
-                    'date': datetime.strptime(l['date'], '%d/%m/%Y'),
-                    'name': l['name'],
-                    'line': i,
-                }
-                res.append(vals)
+        with open(fileobj.name, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(
+                f,
+                fieldnames=fieldnames,
+                delimiter='\t',
+                quoting=csv.QUOTE_MINIMAL)
+            i = 0
+            for l in reader:
+                i += 1
+                # skip non-move lines
+                if l.get('date') and l.get('name') and l.get('amount'):
+                    amount = float(l['amount'].replace(',', '.'))
+                    vals = {
+                        'journal': l['journal'],
+                        'account': l['account'],
+                        'credit': l['sign'] == 'C' and amount or 0,
+                        'debit': l['sign'] == 'D' and amount or 0,
+                        'date': datetime.strptime(l['date'], '%d/%m/%Y'),
+                        'name': l['name'],
+                        'line': i,
+                    }
+                    res.append(vals)
         return res
 
     def fectxt2pivot(self, fileobj):
@@ -307,37 +317,37 @@ class AccountMoveImport(models.TransientModel):
             False,            # Montantdevise
             False,            # Idevise
             ]
-        first_line = fileobj.readline().decode()
-        dialect = unicodecsv.Sniffer().sniff(first_line, delimiters="|\t")
-        fileobj.seek(0)
-        reader = unicodecsv.DictReader(
-            fileobj,
-            fieldnames=fieldnames,
-            delimiter=dialect.delimiter,
-            encoding=self.file_encoding)
         res = []
-        i = 0
-        for l in reader:
-            i += 1
-            # Skip header line
-            if i == 1:
-                continue
-            l['credit'] = l['credit'] or '0'
-            l['debit'] = l['debit'] or '0'
-            vals = {
-                'journal': l['journal'],
-                'move_name': l['move_name'],
-                'account': l['account'],
-                'partner': l['partner_ref'],
-                'credit': float(l['credit'].replace(',', '.')),
-                'debit': float(l['debit'].replace(',', '.')),
-                'date': datetime.strptime(l['date'], '%Y%m%d'),
-                'name': l['name'],
-                'ref': l['ref'],
-                'reconcile_ref': l['reconcile_ref'],
-                'line': i,
-            }
-            res.append(vals)
+        first_line = fileobj.readline().decode()
+        dialect = csv.Sniffer().sniff(first_line, delimiters="|\t")
+        fileobj.seek(0)
+        with open(fileobj.name, newline='', encoding=self.file_encoding) as f:
+            reader = csv.DictReader(
+                f,
+                fieldnames=fieldnames,
+                delimiter=dialect.delimiter)
+            i = 0
+            for l in reader:
+                i += 1
+                # Skip header line
+                if i == 1:
+                    continue
+                l['credit'] = l['credit'] or '0'
+                l['debit'] = l['debit'] or '0'
+                vals = {
+                    'journal': l['journal'],
+                    'move_name': l['move_name'],
+                    'account': l['account'],
+                    'partner': l['partner_ref'],
+                    'credit': float(l['credit'].replace(',', '.')),
+                    'debit': float(l['debit'].replace(',', '.')),
+                    'date': datetime.strptime(l['date'], '%Y%m%d'),
+                    'name': l['name'],
+                    'ref': l['ref'],
+                    'reconcile_ref': l['reconcile_ref'],
+                    'line': i,
+                }
+                res.append(vals)
         return res
 
     def genericcsv2pivot(self, fileobj):
@@ -347,48 +357,46 @@ class AccountMoveImport(models.TransientModel):
             'analytic', 'name', 'debit', 'credit',
             'ref', 'reconcile_ref'
             ]
-        first_line = fileobj.readline().decode()
-        dialect = unicodecsv.Sniffer().sniff(first_line)
-        fileobj.seek(0)
-        reader = unicodecsv.DictReader(
-            fileobj,
-            fieldnames=fieldnames,
-            delimiter=dialect.delimiter,
-            quotechar='"',
-            quoting=unicodecsv.QUOTE_MINIMAL,
-            encoding='utf-8-sig')
         # I use utf-8-sig instead of utf-8 to transparently handle BOM
         # https://en.wikipedia.org/wiki/Byte_order_mark
+        encoding = self.file_encoding == 'utf-8' and 'utf-8-sig' or self.file_encoding
         res = []
-        i = 0
-        for l in reader:
-            i += 1
-            if i == 1 and self.file_with_header:
-                continue
-            date_str = l['date']
-            try:
-                date = datetime.strptime(date_str, self.date_format)
-            except Exception:
-                raise UserError(_(
-                    "Date parsing error: '%s' in line %s does not match "
-                    "date format '%s'.") % (date_str, i, self.date_format))
+        with open(fileobj.name, newline='', encoding=encoding) as f:
+            reader = csv.DictReader(
+                f,
+                fieldnames=fieldnames,
+                delimiter=DELIMITER[self.delimiter],
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL)
+            i = 0
+            for l in reader:
+                i += 1
+                if i == 1 and self.file_with_header:
+                    continue
+                date_str = l['date']
+                try:
+                    date = datetime.strptime(date_str, self.date_format)
+                except Exception:
+                    raise UserError(_(
+                        "Date parsing error: '%s' in line %s does not match "
+                        "date format '%s'.") % (date_str, i, self.date_format))
 
-            vals = {
-                'journal': l['journal'],
-                'account': l['account'],
-                'credit': float(l['credit'].replace(',', '.') or 0),
-                'debit': float(l['debit'].replace(',', '.') or 0),
-                'date': date,
-                'name': l['name'],
-                'ref': l.get('ref', ''),
-                'reconcile_ref': l.get('reconcile_ref', ''),
-                'line': i,
-                }
-            if l['analytic']:
-                vals['analytic'] = l['analytic']
-            if l['partner']:
-                vals['partner'] = l['partner']
-            res.append(vals)
+                vals = {
+                    'journal': l['journal'],
+                    'account': l['account'],
+                    'credit': float(l['credit'].replace(',', '.') or 0),
+                    'debit': float(l['debit'].replace(',', '.') or 0),
+                    'date': date,
+                    'name': l['name'],
+                    'ref': l.get('ref', ''),
+                    'reconcile_ref': l.get('reconcile_ref', ''),
+                    'line': i,
+                    }
+                if l['analytic']:
+                    vals['analytic'] = l['analytic']
+                if l['partner']:
+                    vals['partner'] = l['partner']
+                res.append(vals)
         return res
 
     def genericxlsx_autodetect(self, fileobj, file_bytes):
@@ -524,33 +532,33 @@ class AccountMoveImport(models.TransientModel):
             'trashv', 'name',
             'trashx', 'trashy', 'trashz', 'trashaa', 'trashab',
             'trashac', 'trashad', 'trashae', 'analytic']
-        reader = unicodecsv.DictReader(
-            fileobj,
-            fieldnames=fieldnames,
-            delimiter=';',
-            quoting=unicodecsv.QUOTE_MINIMAL,
-            encoding='latin1')
         res = []
-        i = 0
-        for l in reader:
-            i += 1
-            if i == 1:
-                continue
-            amount = float(l['amount'].replace(',', '.'))
-            credit = l['sign'] == 'C' and amount or False
-            debit = l['sign'] == 'D' and amount or False
-            vals = {
-                'journal': l['journal'],
-                'account': l['account'],
-                'credit': credit,
-                'debit': debit,
-                'date': datetime.strptime(l['date'], '%y%m%d'),
-                'name': l['name'],
-                'line': i,
-            }
-            if l.get('analytic'):
-                vals['analytic'] = l['analytic']
-            res.append(vals)
+        with open(fileobj.name, newline='', encoding='latin1') as f:
+            reader = csv.DictReader(
+                f,
+                fieldnames=fieldnames,
+                delimiter=';',
+                quoting=csv.QUOTE_MINIMAL)
+            i = 0
+            for l in reader:
+                i += 1
+                if i == 1:
+                    continue
+                amount = float(l['amount'].replace(',', '.'))
+                credit = l['sign'] == 'C' and amount or False
+                debit = l['sign'] == 'D' and amount or False
+                vals = {
+                    'journal': l['journal'],
+                    'account': l['account'],
+                    'credit': credit,
+                    'debit': debit,
+                    'date': datetime.strptime(l['date'], '%y%m%d'),
+                    'name': l['name'],
+                    'line': i,
+                }
+                if l.get('analytic'):
+                    vals['analytic'] = l['analytic']
+                res.append(vals)
         return res
 
     def quadra2pivot(self, file_bytes):
@@ -587,22 +595,23 @@ class AccountMoveImport(models.TransientModel):
         # Credit
         # AxeLib
         # AxeReference
-        reader = unicodecsv.DictReader(fileobj, delimiter=";", encoding="utf-8")
-        i = 0
         res = []
-        for l in reader:
-            i += 1
-            vals = {
-                "journal": l.get("JournalCode", ""),
-                "account": l["CompteNum"],
-                "name": l["CompteLib"],
-                "credit": float(l["Credit"] or 0.0),
-                "debit": float(l["Debit"] or 0.0),
-                "analytic": l.get("AxeReference", ""),
-                "date": datetime.strptime(l["EcritureDate"], "%d/%m/%Y"),
-                "line": i,
-            }
-            res.append(vals)
+        with open(fileobj.name, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            i = 0
+            for l in reader:
+                i += 1
+                vals = {
+                    "journal": l.get("JournalCode", ""),
+                    "account": l["CompteNum"],
+                    "name": l["CompteLib"],
+                    "credit": float(l["Credit"] or 0.0),
+                    "debit": float(l["Debit"] or 0.0),
+                    "analytic": l.get("AxeReference", ""),
+                    "date": datetime.strptime(l["EcritureDate"], "%d/%m/%Y"),
+                    "line": i,
+                }
+                res.append(vals)
         return res
 
     def _prepare_partner_speeddict(self, company_id):
@@ -659,7 +668,7 @@ class AccountMoveImport(models.TransientModel):
             errors[key] = {}
         # MATCHES + CHECKS
         for l in pivot:
-            assert l.get('line') and isinstance(l.get('line'), int),\
+            assert l.get('line') and isinstance(l.get('line'), int), \
                 'missing line number'
             if l['account'] in speeddict['account']:
                 l['account_id'] = speeddict['account'][l['account']]

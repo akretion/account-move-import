@@ -50,7 +50,7 @@ from Akretion (alexis.delattre@akretion.com).
     'demo': ['demo/demo.xml'],
     # for the moment, I don't add the 'rows' lib in external_dependencies
     # I wait a new release on pypi https://github.com/turicas/rows/issues/368
-    'external_dependencies': {'python': ['unicodecsv', 'openpyxl', 'xlrd']},
+    'external_dependencies': {'python': ['openpyxl', 'xlrd']},
     'data': [
         'data/sequence.xml',
         'security/ir.model.access.csv',
