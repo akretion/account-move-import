@@ -39,6 +39,7 @@ class AccountMoveImport(models.TransientModel):
         ('extenso', 'In Extenso'),
         ('cielpaye', 'Ciel Paye'),
         ('payfit', 'Payfit'),
+        ('cpt195_txt', 'CPT195 (text)'),
         ], string='File Format', required=True, default='genericxlsx')
     post_move = fields.Boolean(
         string='Post Journal Entry',
@@ -154,6 +155,8 @@ class AccountMoveImport(models.TransientModel):
             return self.cielpaye2pivot(fileobj)
         elif file_format == 'fec_txt':
             return self.fectxt2pivot(fileobj)
+        elif file_format == 'cpt195_txt':
+            return self.cpt195txt2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -494,6 +497,46 @@ class AccountMoveImport(models.TransientModel):
                 "line": i,
             }
             res.append(vals)
+        return res
+
+    def cpt195txt2pivot(self, fileobj):
+        res = []
+        i = 0
+        file_content = base64.decodebytes(self.file_to_import)
+        file_content = file_content.decode("latin1")
+        file_lines = file_content[:-4].split("\r\n")
+        for line in file_lines:
+            i += 1
+            # Skip empty line
+            if not line:
+                continue
+            # Skip line that is not a detail of the account
+            if line[21] != 'D':
+                continue
+            vals = {
+                'journal': line[16:19],
+                'account': line[24:36],
+                "analytic": line[36:43] != "9999999" and line[36:43],
+                'date': datelib(
+                    year=int(line[158:160] + line[14:16]),
+                    month=int(line[12:14]),
+                    day=int(line[22:24]),
+                    ),
+                'name': line[80:100],
+                'ref': line[140:143],
+                'line': i,
+            }
+            credit = int(line[67:80]) / 100.
+            debit = int(line[54:67]) / 100.
+            if credit and debit:
+                vals.update({"credit": credit, "debit": 0})
+                res.append(vals)
+                vals2 = vals.copy()
+                vals2.update({"credit": 0, "debit": debit})
+                res.append(vals2)
+            else:
+                vals.update({"credit": credit, "debit": debit})
+                res.append(vals)
         return res
 
     def _prepare_partner_speeddict(self, company_id):
