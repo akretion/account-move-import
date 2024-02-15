@@ -516,7 +516,7 @@ class AccountMoveImport(models.TransientModel):
             vals = {
                 'journal': line[16:19],
                 'account': line[24:36],
-                "analytic": line[36:38] != "99" and line[36:38],
+                "analytic": line[36:43] != "9999999" and line[36:43],
                 'date': datelib(
                     year=int(line[158:160] + line[14:16]),
                     month=int(line[12:14]),
