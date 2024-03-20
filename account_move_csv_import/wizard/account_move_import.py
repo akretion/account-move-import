@@ -58,8 +58,9 @@ class AccountMoveImport(models.TransientModel):
         ('payfit', 'Payfit'),
         ], string='File Format', required=True, default='genericxlsx')
     post_move = fields.Boolean(
-        string='Post Journal Entry',
-        help="If True, the journal entry will be posted after the import.")
+        string='Post and Reconcile',
+        help="If enabled, the journal entries will be posted and, if the Reconcile Ref "
+        "is available in the import file, Odoo will reconcile the journal items.")
     force_journal_id = fields.Many2one(
         'account.journal', string="Force Journal",
         domain="[('company_id', '=', company_id)]", check_company=True,
@@ -192,7 +193,8 @@ class AccountMoveImport(models.TransientModel):
         self.clean_strip_pivot(pivot)
         self.update_pivot(pivot)
         moves = self.create_moves_from_pivot(pivot, post=self.post_move)
-        self.reconcile_move_lines(moves)
+        if self.post_move:
+            self.reconcile_move_lines(moves)
         action = self.env["ir.actions.actions"]._for_xml_id(
             "account.action_move_journal_line")
         # We need to remove from context 'search_default_posted': 1
@@ -642,7 +644,7 @@ class AccountMoveImport(models.TransientModel):
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
         aacc_sr = self.env['account.analytic.account'].search_read(
-            [('company_id', '=', company_id), ('code', '!=', False)],
+            [('company_id', 'in', (company_id, False)), ('code', '!=', False)],
             ['code'])
         for l in aacc_sr:
             speeddict['analytic'][l['code'].upper()] = l['id']

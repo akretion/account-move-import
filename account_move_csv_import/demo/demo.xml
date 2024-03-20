@@ -11,12 +11,14 @@
     <field name="name">Purchase</field>
     <field name="code">PUR</field>
     <field name="plan_id" ref="analytic.analytic_plan_departments"/>
+    <field name="company_id" eval="False"/>
 </record>
 
 <record id="analytic_support" model="account.analytic.account">
     <field name="name">Support and operations</field>
     <field name="code">SUPP</field>
     <field name="plan_id" ref="analytic.analytic_plan_departments"/>
+    <field name="company_id" eval="False"/>
 </record>
 
 <record id="partner_import1" model="res.partner">

@@ -20,30 +20,30 @@
                 <field name="filename" invisible="1"/>
                 <field name="file_format" />
                 <field name="post_move" />
-                <field name="file_encoding" attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra', 'genericcsv'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra', 'genericcsv'))]}"/>
-                <field name="delimiter" attrs="{'invisible': [('file_format', '!=', 'genericcsv')], 'required': [('file_format', '=', 'genericcsv')]}"/>
+                <field name="file_encoding" invisible="file_format not in ('fec_txt', 'quadra', 'genericcsv')" required="file_format in ('fec_txt', 'quadra', 'genericcsv')"/>
+                <field name="delimiter" invisible="file_format != 'genericcsv'" required="file_format == 'genericcsv'"/>
                 <!-- In v16, I also need to have a company_id field without group, to make the domain on force_journal_id work -->
-                <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
-                <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
-                <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
+                <field name="date_format" invisible="file_format != 'genericcsv'"/>
+                <field name="force_journal_id" required="force_journal_required"/>
+                <field name="force_move_date" required="force_move_date_required"/>
                 <field name="force_move_ref" />
                 <field name="force_journal_required" invisible="1"/>
                 <field name="force_move_date_required" invisible="1"/>
                 <field name="advanced_options" invisible="1"/>
             </group>
             <group name="button_advanced_options">
-                <button name="button_show_advanced_options" type="object" attrs="{'invisible': [('advanced_options', '=', True)]}" string="Show Advanced Options" colspan="2"/>
-                <button name="button_hide_advanced_options" attrs="{'invisible': [('advanced_options', '=', False)]}" type="object" string="Hide Advanced Options" colspan="2"/>
+                <button name="button_show_advanced_options" type="object" invisible="advanced_options" string="Show Advanced Options" colspan="2"/>
+                <button name="button_hide_advanced_options" invisible="not advanced_options" type="object" string="Hide Advanced Options" colspan="2"/>
             </group>
-            <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
-                <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
+            <group name="advanced_options" invisible="not advanced_options">
+                <field name="file_with_header" invisible="file_format not in ('genericcsv', 'genericxlsx')"/>
                 <field name="split_move_method" widget="radio"/>
                 <field name="keep_odoo_move_name"/>
-                <field name="date_by_move_line" attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"/>
+                <field name="date_by_move_line" invisible="split_move_method != 'balanced'"/>
                 <field name="skip_null_lines"/>
                 <field name="force_move_line_name"/>
             </group>
-            <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
+            <div name="info-csv" invisible="file_format != 'genericcsv'">
                 <h2>Information about the Generic CSV format</h2>
                 <ul>
                     <li><em>Encoding</em>: configurable (UTF-8 by default)</li>
@@ -64,7 +64,7 @@
                         </ol></li>
                   </ul>
               </div>
-            <div name="info-xlsx" attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}">
+            <div name="info-xlsx" invisible="file_format != 'genericxlsx'">
                 <h3>Columns of the Generic XLSX/XLS/ODS format</h3>
                     <p>
                     A. Date (must be a date field in the spreadsheet)<br/>
