@@ -1,11 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-
+<?xml version="1.0" encoding="utf-8" ?>
 <!--
   Copyright 2012-2020 Akretion (http://www.akretion.com/)
   @author: Alexis de Lattre <alexis.delattre@akretion.com>
   License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 -->
-
 <odoo>
 
 <record id="account_move_import_form" model="ir.ui.view">
@@ -14,36 +12,75 @@
     <field name="arch" type="xml">
         <form string="Import Account Move">
             <group name="main">
-                <field name="company_id" invisible="1"/>
-                <field name="company_id" groups="base.group_multi_company"/>
-                <field name="file_to_import" filename="filename"/>
-                <field name="filename" invisible="1"/>
+                <field name="company_id" invisible="1" />
+                <field name="company_id" groups="base.group_multi_company" />
+                <field name="file_to_import" filename="filename" />
+                <field name="filename" invisible="1" />
                 <field name="file_format" />
                 <field name="post_move" />
-                <field name="file_encoding" attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra', 'genericcsv'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra', 'genericcsv'))]}"/>
-                <field name="delimiter" attrs="{'invisible': [('file_format', '!=', 'genericcsv')], 'required': [('file_format', '=', 'genericcsv')]}"/>
+                <field
+                        name="file_encoding"
+                        attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra', 'genericcsv'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra', 'genericcsv'))]}"
+                    />
+                <field
+                        name="delimiter"
+                        attrs="{'invisible': [('file_format', '!=', 'genericcsv')], 'required': [('file_format', '=', 'genericcsv')]}"
+                    />
                 <!-- In v16, I also need to have a company_id field without group, to make the domain on force_journal_id work -->
-                <field name="date_format" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"/>
-                <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
-                <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
+                <field
+                        name="date_format"
+                        attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"
+                    />
+                <field
+                        name="force_journal_id"
+                        attrs="{'required': [('force_journal_required', '=', True)]}"
+                    />
+                <field
+                        name="force_move_date"
+                        attrs="{'required': [('force_move_date_required', '=', True)]}"
+                    />
                 <field name="force_move_ref" />
-                <field name="force_journal_required" invisible="1"/>
-                <field name="force_move_date_required" invisible="1"/>
-                <field name="advanced_options" invisible="1"/>
+                <field name="force_journal_required" invisible="1" />
+                <field name="force_move_date_required" invisible="1" />
+                <field name="advanced_options" invisible="1" />
             </group>
             <group name="button_advanced_options">
-                <button name="button_show_advanced_options" type="object" attrs="{'invisible': [('advanced_options', '=', True)]}" string="Show Advanced Options" colspan="2"/>
-                <button name="button_hide_advanced_options" attrs="{'invisible': [('advanced_options', '=', False)]}" type="object" string="Hide Advanced Options" colspan="2"/>
+                <button
+                        name="button_show_advanced_options"
+                        type="object"
+                        attrs="{'invisible': [('advanced_options', '=', True)]}"
+                        string="Show Advanced Options"
+                        colspan="2"
+                    />
+                <button
+                        name="button_hide_advanced_options"
+                        attrs="{'invisible': [('advanced_options', '=', False)]}"
+                        type="object"
+                        string="Hide Advanced Options"
+                        colspan="2"
+                    />
             </group>
-            <group name="advanced_options" attrs="{'invisible': [('advanced_options', '!=', True)]}">
-                <field name="file_with_header" attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"/>
-                <field name="split_move_method" widget="radio"/>
-                <field name="keep_odoo_move_name"/>
-                <field name="date_by_move_line" attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"/>
-                <field name="skip_null_lines"/>
-                <field name="force_move_line_name"/>
+            <group
+                    name="advanced_options"
+                    attrs="{'invisible': [('advanced_options', '!=', True)]}"
+                >
+                <field
+                        name="file_with_header"
+                        attrs="{'invisible': [('file_format', 'not in', ('genericcsv', 'genericxlsx'))]}"
+                    />
+                <field name="split_move_method" widget="radio" />
+                <field name="keep_odoo_move_name" />
+                <field
+                        name="date_by_move_line"
+                        attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"
+                    />
+                <field name="skip_null_lines" />
+                <field name="force_move_line_name" />
             </group>
-            <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
+            <div
+                    name="info-csv"
+                    attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}"
+                >
                 <h2>Information about the Generic CSV format</h2>
                 <ul>
                     <li><em>Encoding</em>: configurable (UTF-8 by default)</li>
@@ -55,7 +92,9 @@
                         <li>Journal code</li>
                         <li>Account code</li>
                         <li>Partner internal reference</li>
-                        <li>Analytic (analytic account reference written as <code>CODE1</code>, or analytic distribution written as <code>CODE1:40|CODE2:60</code>)</li>
+                        <li>Analytic (analytic account reference written as <code
+                                    >CODE1</code>, or analytic distribution written as <code
+                                    >CODE1:40|CODE2:60</code>)</li>
                         <li>Label</li>
                         <li>Debit</li>
                         <li>Credit</li>
@@ -64,25 +103,35 @@
                         </ol></li>
                   </ul>
               </div>
-            <div name="info-xlsx" attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}">
+            <div
+                    name="info-xlsx"
+                    attrs="{'invisible': [('file_format', '!=', 'genericxlsx')]}"
+                >
                 <h3>Columns of the Generic XLSX/XLS/ODS format</h3>
                     <p>
-                    A. Date (must be a date field in the spreadsheet)<br/>
-                    B. Journal Code<br/>
-                    C. Account Code<br/>
-                    D. Partner Reference<br/>
-                    E. Analytic (analytic account reference written as <code>CODE1</code>, or analytic distribution written as <code>CODE1:40|CODE2:60</code>)<br/>
-                    F. Label<br/>
-                    G. Debit<br/>
-                    H. Credit<br/>
-                    I. Ref (used as Journal Entry Ref)<br/>
-                    J. Reconcile Ref (used for reconciliation after import)<br/>
+                    A. Date (must be a date field in the spreadsheet)<br />
+                    B. Journal Code<br />
+                    C. Account Code<br />
+                    D. Partner Reference<br />
+                    E. Analytic (analytic account reference written as <code
+                        >CODE1</code>, or analytic distribution written as <code
+                        >CODE1:40|CODE2:60</code>)<br />
+                    F. Label<br />
+                    G. Debit<br />
+                    H. Credit<br />
+                    I. Ref (used as Journal Entry Ref)<br />
+                    J. Reconcile Ref (used for reconciliation after import)<br />
                 </p>
             </div>
 
             <footer>
-                <button name="run_import" type="object" string="Import" class="btn-primary" />
-                <button special="cancel" string="Cancel"/>
+                <button
+                        name="run_import"
+                        type="object"
+                        string="Import"
+                        class="btn-primary"
+                    />
+                <button special="cancel" string="Cancel" />
             </footer>
         </form>
     </field>
@@ -95,9 +144,11 @@
     <field name="target">new</field>
 </record>
 
-<menuitem id="account_move_import_menu"
+<menuitem
+        id="account_move_import_menu"
         parent="account.menu_finance_entries_actions"
         action="account_move_import_action"
-        sequence="150" />
+        sequence="150"
+    />
 
 </odoo>
