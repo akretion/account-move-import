@@ -692,8 +692,8 @@ class AccountMoveImport(models.TransientModel):
             if not l.get('account_id'):
                 errors['account'].setdefault(l['account'], []).append(l['line'])
             if l.get('partner'):
-                if l['partner'] in speeddict['partner']:
-                    l['partner_id'] = speeddict['partner'][l['partner']]
+                if str(l['partner']).upper() in speeddict['partner']:
+                    l['partner_id'] = speeddict['partner'][str(l['partner']).upper()]
                 else:
                     errors['partner'].setdefault(l['partner'], []).append(l['line'])
             if l.get('analytic'):
