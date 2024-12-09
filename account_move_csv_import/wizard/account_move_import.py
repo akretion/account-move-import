@@ -51,6 +51,7 @@ class AccountMoveImport(models.TransientModel):
         ('genericxlsx', 'Generic XLSX/XLS/ODS'),
         ('genericcsv', 'Generic CSV'),
         ('fec_txt', 'FEC (text)'),
+        ('silae', 'Silae XLSX'),
         ('nibelis', 'Nibelis (Prisme)'),
         ('quadra', 'Quadra (without analytic)'),
         ('extenso', 'In Extenso'),
@@ -166,6 +167,8 @@ class AccountMoveImport(models.TransientModel):
             return self.genericcsv2pivot(fileobj)
         elif file_format == 'genericxlsx':
             return self.genericxlsx_autodetect(fileobj, file_bytes)
+        elif file_format == 'silae':
+            return self.silae2pivot(fileobj)
         elif file_format == 'quadra':
             return self.quadra2pivot(file_bytes)
         elif file_format == 'extenso':
@@ -322,6 +325,9 @@ class AccountMoveImport(models.TransientModel):
         res = []
         first_line = fileobj.readline().decode()
         dialect = csv.Sniffer().sniff(first_line, delimiters="|\t")
+        logger.info(
+            'FEC import auto-detected delimiter: %s',
+            dialect.delimiter == '\t' and 'tab' or dialect.delimiter)
         fileobj.seek(0)
         with open(fileobj.name, newline='', encoding=self.file_encoding) as f:
             reader = csv.DictReader(
@@ -522,6 +528,36 @@ class AccountMoveImport(models.TransientModel):
                 'credit': row.credit,
                 'ref': row.ref,
                 'reconcile_ref': row.reconcile_ref,
+                'line': i,
+                }
+            res.append(vals)
+        return res
+
+    def silae2pivot(self, fileobj):
+        try:
+            wb = openpyxl.load_workbook(fileobj.name, read_only=True)
+        except Exception as e:
+            raise UserError(_(
+                "The file you are trying to import is not an XLSX file.\n"
+                "Details of the error: %s.") % e)
+        sh = wb.active
+        res = []
+        i = 0
+        for row in sh.rows:
+            i += 1
+            if i == 1:  # silae has header line
+                continue
+            if not [item for item in row if item.value]:
+                # skip empty line
+                continue
+            vals = {
+                'journal': row[0].value,
+                'date': row[1].value,
+                'account': str(row[2].value),
+                'analytic': row[3].value or False,
+                'name': row[4].value,
+                'debit': row[5].value,
+                'credit': row[6].value,
                 'line': i,
                 }
             res.append(vals)
