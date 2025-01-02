@@ -1,8 +1,8 @@
-# Copyright 2012-2022 Akretion France (http://www.akretion.com)
+# Copyright 2012-2025 Akretion France (https://www.akretion.com)
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models, _
+from odoo import api, fields, models, Command, _
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 from datetime import datetime, date as datelib
@@ -204,14 +204,14 @@ class AccountMoveImport(models.TransientModel):
         action['context'] = {'default_move_type': 'entry', 'view_no_maturity': True}
         if len(moves) == 1:
             action.update({
-                'view_mode': 'form,tree',
+                'view_mode': 'form,list',
                 'res_id': moves[0].id,
                 'view_id': False,
                 'views': False,
                 })
         else:
             action.update({
-                'view_mode': 'tree,form',
+                'view_mode': 'list,form',
                 'domain': [('id', 'in', moves.ids)],
                 })
         return action
@@ -676,8 +676,8 @@ class AccountMoveImport(models.TransientModel):
             "account": {},
             "analytic": {},
             }
-        acc_sr = self.env['account.account'].search_read([
-            ('company_id', '=', company_id),
+        acc_sr = self.env['account.account'].with_company(company_id).search_read([
+            ('company_ids', 'in', company_id),
             ('deprecated', '=', False)], ['code'])
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
@@ -831,7 +831,7 @@ class AccountMoveImport(models.TransientModel):
             else:
                 raise UserError(_("Wrong Move Split Method."))
             if all(same_move):  # append to current move
-                cur_move['line_ids'].append((0, 0, self._prepare_move_line(l, seq)))
+                cur_move['line_ids'].append(Command.create(self._prepare_move_line(l, seq)))
             else:  # new move
                 if cur_move:
                     if len(cur_move['line_ids']) <= 1:
@@ -840,7 +840,7 @@ class AccountMoveImport(models.TransientModel):
                             "Debug data: %s") % (l['line'], cur_move['line_ids']))
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
-                cur_move['line_ids'] = [(0, 0, self._prepare_move_line(l, seq))]
+                cur_move['line_ids'] = [Command.create(self._prepare_move_line(l, seq))]
                 cur_date = l['date']
                 cur_move_name = move_name
                 cur_journal_id = l['journal_id']
@@ -858,7 +858,7 @@ class AccountMoveImport(models.TransientModel):
         logger.info(
             'Account moves IDs %s created via file import' % rmoves.ids)
         if post:
-            rmoves.action_post()
+            rmoves._post(soft=False)
         return rmoves
 
     def _prepare_move(self, pivot_line):
@@ -880,7 +880,7 @@ class AccountMoveImport(models.TransientModel):
             'account_id': pivot_line['account_id'],
             'analytic_distribution': pivot_line.get('analytic_distribution'),
             'import_reconcile': pivot_line.get('reconcile_ref'),
-            'import_external_id': '%s-%s' % (sequence, pivot_line.get('line')),
+            'import_external_id': f"{sequence}-{pivot_line.get('line')}",
             }
         return vals
 
