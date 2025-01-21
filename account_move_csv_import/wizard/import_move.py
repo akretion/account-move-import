@@ -527,7 +527,9 @@ class AccountMoveImport(models.TransientModel):
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
         aacc_sr = self.env['account.analytic.account'].search_read(
-            [('company_id', '=', company_id), ('code', '!=', False)],
+            [('code', '!=', False),
+              '|',('company_id', '=', company_id),
+                  ('company_id', '=', False)],
             ['code'])
         for l in aacc_sr:
             speeddict['analytic'][l['code'].upper()] = l['id']
