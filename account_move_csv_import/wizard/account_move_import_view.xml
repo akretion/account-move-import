@@ -42,6 +42,7 @@
                 <field name="date_by_move_line" attrs="{'invisible': [('split_move_method', '!=', 'balanced')]}"/>
                 <field name="skip_null_lines"/>
                 <field name="force_move_line_name"/>
+                <field name="create_partner" attrs="{'invisible': [('file_format', '!=', 'fec_txt')]}"/>
             </group>
             <div name="info-csv" attrs="{'invisible': [('file_format', '!=', 'genericcsv')]}">
                 <h2>Information about the Generic CSV format</h2>

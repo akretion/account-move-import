@@ -100,6 +100,10 @@ class AccountMoveImport(models.TransientModel):
         ('move_name', 'Journal Entry Number'),
         ], default='balanced', required=True,
         help="If you select the method 'Balanced', Odoo will cut the move when a group of lines is balanced with the same journal and date. If you select the method 'Journal Entry Number', Odoo will cut the move using the field 'move_name' of the pivot format (this field is optional, but it will have to be present if you select this method).")
+    create_partner = fields.Boolean(
+        string="Create Partners",
+        help="Create an inactive partner when a journal item "
+        "has a partner that doesn't match with any existing partner.")
     # START advanced options used in 'genericcsv' import
     # (but could be used by other imports if needed)
     date_format = fields.Char(
@@ -308,7 +312,7 @@ class AccountMoveImport(models.TransientModel):
             'account',        # CompteNum
             False,            # CompteLib
             'partner_ref',    # CompAuxNum
-            False,            # CompAuxLib
+            'partner_name',   # CompAuxLib
             'ref',            # PieceRef
             False,            # PieceDate
             'name',           # EcritureLib
@@ -345,6 +349,7 @@ class AccountMoveImport(models.TransientModel):
                     'move_name': l['move_name'],
                     'account': l['account'],
                     'partner': l['partner_ref'],
+                    'partner_name': l['partner_name'],
                     'credit': float(l['credit'].replace(',', '.')),
                     'debit': float(l['debit'].replace(',', '.')),
                     'date': datetime.strptime(l['date'], '%Y%m%d'),
@@ -690,10 +695,23 @@ class AccountMoveImport(models.TransientModel):
             speeddict['journal'][l['code'].upper()] = l['id']
         return speeddict
 
+    def _prepare_new_partner(self, pivot_entry, speeddict):
+        ref = str(pivot_entry['partner'])
+        vals = {
+            'is_company': True,
+            'name': pivot_entry.get('partner_name') or ref,
+            'active': False,
+            'ref': ref,
+            'comment': 'Partner automatically created by journal entry import.',
+            }
+        return vals
+
     def create_moves_from_pivot(self, pivot, post=False):
         logger.debug('Final pivot: %s', pivot)
         amo = self.env['account.move']
+        rpo = self.env['res.partner']
         company_id = self.company_id.id
+        create_partner = self.create_partner
         speeddict = self._prepare_speeddict(company_id)
         key2label = {
             'journal': _('journal codes'),
@@ -730,8 +748,13 @@ class AccountMoveImport(models.TransientModel):
             if not l.get('account_id'):
                 errors['account'].setdefault(l['account'], []).append(l['line'])
             if l.get('partner'):
-                if str(l['partner']) in speeddict['partner']:
-                    l['partner_id'] = speeddict['partner'][str(l['partner'])]
+                partner_ref = str(l['partner'])
+                if partner_ref not in speeddict['partner'] and create_partner:
+                    partner = rpo.create(self._prepare_new_partner(l, speeddict))
+                    logger.info('Partner %s reference %s created', partner.display_name, partner_ref)
+                    speeddict['partner'][partner_ref] = partner.id
+                if partner_ref in speeddict['partner']:
+                    l['partner_id'] = speeddict['partner'][partner_ref]
                 else:
                     errors['partner'].setdefault(l['partner'], []).append(l['line'])
             if l.get('analytic'):
