@@ -656,7 +656,7 @@ class AccountMoveImport(models.TransientModel):
 
     def _prepare_partner_speeddict(self, company_id):
         speeddict = {}
-        partner_sr = self.env['res.partner'].search_read(
+        partner_sr = self.env['res.partner'].with_context(active_test=False).search_read(
             [
                 '|',
                 ('company_id', '=', company_id),
@@ -788,11 +788,12 @@ class AccountMoveImport(models.TransientModel):
         msg = ''
         for key, label in key2label.items():
             if errors[key]:
+                errors_key_sorted = sorted(errors[key].items(), key=lambda x: x[0])
                 msg += _("List of %s that don't exist in Odoo:\n%s\n\n") % (
                     label,
                     '\n'.join([
                         '- %s : line(s) %s' % (code, ', '.join([str(i) for i in lines]))
-                        for (code, lines) in errors[key].items()]))
+                        for (code, lines) in errors_key_sorted]))
         if errors['other']:
             msg += _('List of misc errors:\n%s') % (
                 '\n'.join(['- %s' % e for e in errors['other']]))
