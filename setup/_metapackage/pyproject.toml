@@ -1,0 +1,11 @@
+[project]
+name = "odoo-addons-akretion-account-move-import"
+version = "18.0.20250131.0"
+dependencies = [
+    "odoo-addon-account_move_csv_import==18.0.*",
+]
+classifiers=[
+    "Programming Language :: Python",
+    "Framework :: Odoo",
+    "Framework :: Odoo :: 18.0",
+]
