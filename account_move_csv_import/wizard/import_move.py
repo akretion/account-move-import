@@ -9,6 +9,7 @@ from datetime import datetime
 import unicodecsv
 from tempfile import TemporaryFile
 import base64
+import zipfile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -133,10 +134,12 @@ class AccountMoveImport(models.TransientModel):
         fileobj.write(file_bytes)
         fileobj.seek(0)  # We must start reading from the beginning !
         pivot = self.file2pivot(fileobj, file_bytes)
-        fileobj.close()
         logger.debug('pivot before update: %s', pivot)
         self.update_pivot(pivot)
         moves = self.create_moves_from_pivot(pivot, post=self.post_move)
+        if len(moves) == 1 and zipfile.is_zipfile(fileobj):
+            self.archive_zip(moves, fileobj)
+        fileobj.close()
         self.reconcile_move_lines(moves)
         action = {
             'name': _('Imported Journal Entries'),
@@ -157,6 +160,19 @@ class AccountMoveImport(models.TransientModel):
                 'domain': [('id', 'in', moves.ids)],
                 })
         return action
+
+    def archive_zip(self, moves, fileobj):
+        with zipfile.ZipFile(fileobj) as myzip:
+            for filename in myzip.namelist():
+                with myzip.open(filename) as myfile:
+                    self.env["ir.attachment"].create(
+                        {
+                            "res_model": "account.move",
+                            "res_id": moves.id,
+                            "name": filename,
+                            "datas": base64.b64encode(myfile.read()),
+                        }
+                    )
 
     def update_pivot(self, pivot):
         force_move_date = self.force_move_date
@@ -307,8 +323,20 @@ class AccountMoveImport(models.TransientModel):
                 vals['partner'] = {'ref': l['partner']}
             res.append(vals)
         return res
-    
+
     def danloen2pivot(self, fileobj):
+        res = []
+        if zipfile.is_zipfile(fileobj):
+            with zipfile.ZipFile(fileobj) as myzip:
+                for filename in myzip.namelist():
+                    logger.info('FILE: %s', filename)
+                    if filename.endswith('_danlonfinans.txt'):
+                        res = self._danloen2pivot(myzip.open(filename))
+        else:
+            res = self._danloen2pivot(fileobj)
+        return res
+
+    def _danloen2pivot(self, fileobj):
         fieldnames = [
             False, 'date', False, 'account', False, 'amount', 'name', 'period']
         reader = unicodecsv.DictReader(
@@ -342,11 +370,11 @@ class AccountMoveImport(models.TransientModel):
         return res
 
     def zenegy2pivot(self, fileobj):
-        #fieldnames = [
+        # fieldnames = [
         #    'number', 'date', False, 'account', False, 'amount', 'name', 'period']
         aa = self.env['account.analytic.account']
         line1 = fileobj.readline().decode('iso-8859-1')
-        logger.info('LOEN: %s', line1) 
+        logger.info('LOEN: %s', line1)
         if line1.startswith(u'Lønkørsels ID;CVR nummer;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
             fileobj.seek(0)
         elif line1.startswith(u'Lønkørsels ID;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
@@ -401,7 +429,6 @@ class AccountMoveImport(models.TransientModel):
                     vals2['credit'] = credit2
                     res.append(vals2)
         return res
-    
 
     def meilleuregestion2pivot(self, fileobj):
         fieldnames = [
@@ -494,13 +521,12 @@ class AccountMoveImport(models.TransientModel):
                 vals['analytic'] = {'code': analytic}
             res.append(vals)
         return res
-    
-    
+
     def c52pivot(self, fileobj):
-        
+
         def get_col(col):
             return ord(col[0]) - 65
-        
+
         def take_voucher(elem):
             return elem[get_col(self.col_map_id.voucher_fld)]
 
@@ -519,9 +545,9 @@ class AccountMoveImport(models.TransientModel):
                 lines.append(l)
         lines.sort(key=take_voucher)
         for l in lines:
-        
+
             text = l[get_col(self.col_map_id.text_fld)]
-            if (not(text and text.strip())): 
+            if (not(text and text.strip())):
                 continue
             if self.col_map_id.amount_fld:
                 amount_txt = l[get_col(self.col_map_id.amount_fld)]
@@ -538,20 +564,20 @@ class AccountMoveImport(models.TransientModel):
             else:
                 debit = float(l[get_col(self.col_map_id.debit_fld)].replace('.', '').replace(',', '.'))
                 credit = float(l[get_col(self.col_map_id.credit_fld)].replace('.', '').replace(',', '.'))
-                
+
             # Partner search
             partner = False
             number = [int(s) for s in l[get_col(self.col_map_id.text_fld)].split() if s.isdigit()]
             if number:
                 member_number = '%s%s' % (org_code, number[0])
                 partner = self.env['res.partner'].with_context(active_test=False).search([('member_number', '=', member_number)])
-                    
+
             vals = {
                 'account': {'code': l[get_col(self.col_map_id.account_fld)]},
                 'name': l[get_col(self.col_map_id.text_fld)],
                 'credit': credit,
                 'debit': debit,
-                'date': datetime.strptime(l[get_col(self.col_map_id.date_fld)].replace('PR','01'), self.col_map_id.date_format),
+                'date': datetime.strptime(l[get_col(self.col_map_id.date_fld)].replace('PR', '01'), self.col_map_id.date_format),
                 'line': i,
                 'ref': l[get_col(self.col_map_id.voucher_fld)]
             }
@@ -559,7 +585,7 @@ class AccountMoveImport(models.TransientModel):
                 vals['partner_id'] = partner.commercial_partner_id.id
             res.append(vals)
         return res
-    
+
     def create_moves_from_pivot(self, pivot, post=False):
         logger.info('Final pivot: %s', pivot)
         bdio = self.env['business.document.import']
@@ -620,8 +646,9 @@ class AccountMoveImport(models.TransientModel):
                     cur_ref == ref and
                     cur_journal_id == l['journal_id'] and
                     cur_date == l['date'] and
-                    ref):
-                    # not float_is_zero(cur_balance, precision_rounding=prec)):
+                    ref
+            ):
+                # not float_is_zero(cur_balance, precision_rounding=prec)):
                 # append to current move
                 cur_move['line_ids'].append((0, 0, self._prepare_move_line(l)))
             else:
