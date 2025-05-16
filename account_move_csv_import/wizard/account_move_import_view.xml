@@ -18,6 +18,7 @@
                 <field name="filename" invisible="1"/>
                 <field name="file_format" />
                 <field name="post_move" />
+                <field name="use_date_maturity"/>
                 <field name="file_encoding" invisible="file_format not in ('fec_txt', 'quadra', 'genericcsv')" required="file_format in ('fec_txt', 'quadra', 'genericcsv')"/>
                 <field name="delimiter" invisible="file_format != 'genericcsv'" required="file_format == 'genericcsv'"/>
                 <field name="date_format" invisible="file_format != 'genericcsv'"/>
@@ -59,6 +60,7 @@
                         <li>Ref (used as Journal Entry Ref)</li>
                         <li>Reconcile ref (used for reconciliation after import)</li>
                         <li>Journal entry number</li>
+                        <li>Due Date (DD/MM/YYYY or configurable, optional)</li>
                         </ol></li>
                   </ul>
               </div>
@@ -76,6 +78,7 @@
                     I. Ref (used as Journal Entry Ref)<br/>
                     J. Reconcile Ref (used for reconciliation after import)<br/>
                     K. Journal Entry Number<br/>
+                    L. Due Date (must be a date field in the spreadsheet, optional)<br/>
                 </p>
             </div>
 
