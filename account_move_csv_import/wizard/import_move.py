@@ -39,6 +39,7 @@ class AccountMoveImport(models.TransientModel):
         ('extenso', 'In Extenso'),
         ('cielpaye', 'Ciel Paye'),
         ('payfit', 'Payfit'),
+        ('silae', 'SILAE'),
         ], string='File Format', required=True, default='genericxlsx')
     post_move = fields.Boolean(
         string='Post Journal Entry',
@@ -154,6 +155,8 @@ class AccountMoveImport(models.TransientModel):
             return self.cielpaye2pivot(fileobj)
         elif file_format == 'fec_txt':
             return self.fectxt2pivot(fileobj)
+        elif file_format == 'silae':
+            return self.silae2pivot(fileobj)
         else:
             raise UserError(_("You must select a file format."))
 
@@ -495,6 +498,31 @@ class AccountMoveImport(models.TransientModel):
                 "date": datetime.strptime(l["EcritureDate"], "%d/%m/%Y"),
                 "line": i,
             }
+            res.append(vals)
+        return res
+
+    def silae2pivot(self, fileobj):
+        wb = openpyxl.load_workbook(fileobj.name, read_only=True)
+        sh = wb.active
+        res = []
+        i = 0
+        for row in sh.rows:
+            i += 1
+            if i == 1:
+                continue
+            if not [item for item in row if item.value]:
+                # skip empty line
+                continue
+            vals = {
+                'journal': row[0].value,
+                'date': row[1].value,
+                'account': str(row[2].value),
+                'analytic': row[3].value or False,
+                'name': row[4].value,
+                'debit': row[5].value,
+                'credit': row[6].value,
+                'line': i,
+                }
             res.append(vals)
         return res
 
