@@ -112,6 +112,9 @@ class AccountMoveImport(models.TransientModel):
     file_with_header = fields.Boolean(
         string='Has Header Line',
         help="Indicate if the first line is a header line and should be ignored.")
+    use_date_maturity = fields.Boolean(
+        string='Use Date Maturity',
+        help='If enabled, the import will use the date maturity field from the file.')
 
     @api.depends('file_format')
     def _compute_force_required(self):
@@ -366,7 +369,7 @@ class AccountMoveImport(models.TransientModel):
         fieldnames = [
             'date', 'journal', 'account', 'partner',
             'analytic', 'name', 'debit', 'credit',
-            'ref', 'reconcile_ref', 'move_name',
+            'ref', 'reconcile_ref', 'move_name', 'date_maturity',
             ]
         # I use utf-8-sig instead of utf-8 to transparently handle BOM
         # https://en.wikipedia.org/wiki/Byte_order_mark
@@ -402,6 +405,7 @@ class AccountMoveImport(models.TransientModel):
                     'ref': l.get('ref', ''),
                     'reconcile_ref': l.get('reconcile_ref', ''),
                     'move_name': l.get('move_name', ''),
+                    'date_maturity': l.get('date_maturity', ''),
                     'line': i,
                     }
                 if l['analytic']:
@@ -448,6 +452,7 @@ class AccountMoveImport(models.TransientModel):
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
                 'move_name': len(row) > 10 and row[10].value or '',
+                'date_maturity': len(row) > 11 and row[11].value or False,
                 'line': i,
                 }
             res.append(vals)
@@ -484,6 +489,7 @@ class AccountMoveImport(models.TransientModel):
                 'credit': row[7].value,
                 'ref': len(row) > 8 and row[8].value or '',
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
+                'date_maturity': len(row) > 11 and row[11].value and datetime(*xlrd.xldate_as_tuple(row[11].value, wb.datemode)) or False,
                 'line': i,
                 }
             res.append(vals)
@@ -509,6 +515,7 @@ class AccountMoveImport(models.TransientModel):
             ('credit', rows.fields.FloatField),
             ('ref', rows.fields.TextField),
             ('reconcile_ref', rows.fields.TextField),
+            ('date_maturity', rows.fields.DateField),
             ])
 
         sh = rows.import_from_ods(fileobj.name, fields=fields_ods, skip_header=False)
@@ -531,6 +538,7 @@ class AccountMoveImport(models.TransientModel):
                 'credit': row.credit,
                 'ref': row.ref,
                 'reconcile_ref': row.reconcile_ref,
+                'date_maturity': getattr(row, 'date_maturity', False),
                 'line': i,
                 }
             res.append(vals)
@@ -904,6 +912,19 @@ class AccountMoveImport(models.TransientModel):
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': '%s-%s' % (sequence, pivot_line.get('line')),
             }
+        
+        if self.use_date_maturity and pivot_line.get('date_maturity'):
+            try:
+                if isinstance(pivot_line['date_maturity'], str):
+                    vals['date_maturity'] = datetime.strptime(
+                        pivot_line['date_maturity'], self.date_format)
+                else:
+                    vals['date_maturity'] = pivot_line['date_maturity']
+            except Exception:
+                logger.warning(
+                    "Could not parse date maturity '%s' for line %s",
+                    pivot_line['date_maturity'], pivot_line.get('line'))
+                
         return vals
 
     def reconcile_move_lines(self, moves):
