@@ -244,6 +244,7 @@ class AccountMoveImport(models.TransientModel):
                 l['credit'] = 0.0
             if not l['debit']:
                 l['debit'] = 0.0
+                l['amount_currency'] *= -1
 
     def extenso2pivot(self, fileobj):
         fieldnames = [
@@ -319,8 +320,8 @@ class AccountMoveImport(models.TransientModel):
             'reconcile_ref',  # EcritureLet
             False,            # DateLet
             False,            # ValidDate
-            False,            # Montantdevise
-            False,            # Idevise
+            'montantdevise',  # Montantdevise
+            'devise',         # Idevise
             ]
         res = []
         first_line = fileobj.readline().decode()
@@ -354,6 +355,10 @@ class AccountMoveImport(models.TransientModel):
                     'ref': l['ref'],
                     'reconcile_ref': l['reconcile_ref'],
                     'line': i,
+                    'amount_currency': float(l['montantdevise'].replace(',', '.'))
+                    if l['montantdevise']
+                    else False,
+                    'devise': l['devise'],
                 }
                 res.append(vals)
         return res
@@ -675,6 +680,7 @@ class AccountMoveImport(models.TransientModel):
             "journal": {},
             "account": {},
             "analytic": {},
+            "devise": {},
             }
         acc_sr = self.env['account.account'].with_company(company_id).search_read([
             ('company_ids', 'in', company_id),
@@ -690,6 +696,13 @@ class AccountMoveImport(models.TransientModel):
             ('company_id', '=', company_id)], ['code'])
         for l in journal_sr:
             speeddict['journal'][l['code'].upper()] = l['id']
+        currency_ids = self.env["res.currency"].search_read(
+            [("active", "=", True)], ["name"]
+        )
+        default_currency = self.company_id.currency_id.id
+        speeddict["devise"]["default"] = default_currency
+        for l in currency_ids:
+            speeddict["devise"][l["name"].upper()] = l["id"]
         return speeddict
 
     def create_moves_from_pivot(self, pivot, post=False):
@@ -783,6 +796,19 @@ class AccountMoveImport(models.TransientModel):
                 errors['other'].append(_(
                     'Line %d: bad value for debit (%s).')
                     % (l['line'], l['debit']))
+            if l.get("amount_currency"):
+                if not isinstance(l.get("amount_currency"), (float, int)):
+                    errors["other"].append(
+                        _(
+                            f"Line {l['line']}: bad value for amount_currency ({l['amount_currency']})"
+                        )
+                    )
+            else:
+                l["amount_currency"] = (-1 * l.get("credit")) or l.get("debit")
+            if l.get("devise"):
+                l["currency_id"] = speeddict["devise"][l["devise"]]
+            else:
+                l["currency_id"] = speeddict["devise"]["default"]
             # test that they don't have both a value
         # LIST OF ERRORS
         msg = ''
@@ -882,6 +908,8 @@ class AccountMoveImport(models.TransientModel):
             'analytic_distribution': pivot_line.get('analytic_distribution'),
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': f"{sequence}-{pivot_line.get('line')}",
+            "amount_currency": pivot_line["amount_currency"],
+            "currency_id": pivot_line["currency_id"],
             }
         return vals
 
