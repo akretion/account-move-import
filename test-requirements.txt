@@ -1,0 +1,2 @@
+odoo-addon-base_business_document_import @ git+https://github.com/steingabelgaard/edi@15.0#subdirectory=base_business_document_import
+odoo-addon-pdf_helper @ git+https://github.com/steingabelgaard/edi@15.0#subdirectory=pdf_helper

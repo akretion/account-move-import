@@ -26,7 +26,7 @@
                         <field name="amount_fld"/>
                         <field name="debit_fld"/>
                         <field name="credit_fld"/>
-                        
+
                     </group>
                 </sheet>
                 <div class="oe_chatter"></div>
@@ -62,7 +62,7 @@
         <field name="domain">[]</field>
         <field name="context">{}</field>
     </record>
-    
+
     <menuitem
         id="account_move_import_conf_menu"
         parent="account.menu_finance_configuration"

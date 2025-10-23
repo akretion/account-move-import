@@ -13,7 +13,8 @@
 Account Move Import
 ===================
 
-This module handle the import of one or several account moves from a file (CSV, TXT, XLS or any other format). The name of this module is account_move_csv_import, but it is not limited to the import of CSV files (this is an historic name and I didn't want to change it). This module currently supports:
+This module handle the import of one or several account moves from a file (CSV, TXT, XLS or any other format). The name of this module is account_move_csv_import,
+but it is not limited to the import of CSV files (this is an historic name and I didn't want to change it). This module currently supports:
 
 * LibreOffice CSV export files,
 * MeilleureGestion.com payroll CSV files,
@@ -34,8 +35,15 @@ There are many community modules that handle the import of account moves via CSV
 * expressive error messages
 
 This module has been written by Alexis de Lattre from Akretion (alexis.delattre@akretion.com).
+
+Import mapning and Additional formats:
+* Danløn
+* C5
+* Zenergy
+
+Added by Stein & Gabelgaard ApS
     """,
-    'author': 'Akretion',
+    'author': 'Akretion,Stein & Gabelgaard ApS',
     'website': 'http://www.akretion.com',
     'depends': [
         'account',

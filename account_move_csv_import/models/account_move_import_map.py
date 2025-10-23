@@ -1,7 +1,7 @@
 # Copyright 2020 Stein & Gabelgaard ApS
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models, _
+from odoo import fields, models
 
 
 class AccountMoveImportMap(models.Model):
@@ -20,7 +20,7 @@ class AccountMoveImportMap(models.Model):
         ),
     )
     item_ids = fields.One2many('account.move.import.map.item', 'map_id', 'Account mappings')
-    
+
     def _prepare_account_speed_dict(self):
         speed_dict = {}
         for l in self.item_ids:
