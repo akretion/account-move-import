@@ -1,12 +1,12 @@
 # Translation of Odoo Server.
 # This file contains the translation of the following modules:
-#	* account_move_csv_import
+# 	* account_move_csv_import
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 12.0\n"
+"Project-Id-Version: Odoo Server 15.0\n"
 "Report-Msgid-Bugs-To: \n"
-"Last-Translator: <>\n"
+"Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -39,7 +39,7 @@ msgid "<em>Text separator</em>: \" (quote)"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_encoding:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__ascii
 msgid "ASCII"
 msgstr ""
 
@@ -101,7 +101,7 @@ msgid "Analytic account"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__c5
 msgid "C5"
 msgstr ""
 
@@ -111,7 +111,7 @@ msgid "Cancel"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__cielpaye
 msgid "Ciel Paye"
 msgstr ""
 
@@ -153,7 +153,7 @@ msgid "Credit field"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__danloen
 msgid "Danløn"
 msgstr ""
 
@@ -217,7 +217,7 @@ msgid "Encoding"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__fec_txt
 msgid "FEC (text)"
 msgstr ""
 
@@ -287,7 +287,7 @@ msgid "Force Reference"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__genericcsv
 msgid "Generic CSV"
 msgstr ""
 
@@ -300,7 +300,7 @@ msgid "ID"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_encoding:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__latin1
 msgid "ISO 8859-15 (alias Latin1)"
 msgstr ""
 
@@ -311,7 +311,8 @@ msgstr ""
 
 #. module: account_move_csv_import
 #: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "If exporting from LibreOffice, set Language to\n"
+msgid ""
+"If exporting from LibreOffice, set Language to\n"
 "                        English on numeric cells."
 msgstr ""
 
@@ -343,13 +344,13 @@ msgid "Import file has header in first line"
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:138
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Imported Journal Entries"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__extenso
 msgid "In Extenso"
 msgstr ""
 
@@ -370,12 +371,19 @@ msgstr ""
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__force_journal_id
-msgid "Journal in which the journal entry will be created, even if the file indicate another journal."
+msgid ""
+"Journal in which the journal entry will be created, even if the file "
+"indicate another journal."
 msgstr ""
 
 #. module: account_move_csv_import
 #: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
 msgid "Label"
+msgstr ""
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__move_prefix
+msgid "Label prefix"
 msgstr ""
 
 #. module: account_move_csv_import
@@ -408,37 +416,37 @@ msgid "Legal account"
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:513
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Line %d:"
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:536
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Line %d: bad value for credit (%s)."
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:540
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Line %d: bad value for debit (%s)."
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:533
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Line %d: missing date."
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:530
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "Line %d: missing label."
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__meilleuregestion
 msgid "MeilleureGestion (Prisme)"
 msgstr ""
 
@@ -454,7 +462,7 @@ msgid "Partner internal reference"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__payfit
 msgid "Payfit"
 msgstr ""
 
@@ -464,7 +472,7 @@ msgid "Post Journal Entry"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_format:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__quadra
 msgid "Quadra (without analytic)"
 msgstr ""
 
@@ -489,7 +497,7 @@ msgid "Source Account"
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,fec_txt_field_separator:0
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__fec_txt_field_separator__tab
 msgid "Tabulation"
 msgstr ""
 
@@ -499,19 +507,29 @@ msgid "Text field"
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:565
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
-msgid "The journal entry that ends on line %d is not balanced (balance is %s)."
+msgid ""
+"The journal entry that ends on line %d (voucher %s)is not balanced (balance "
+"is %s)."
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:582
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
-msgid "The journal entry that ends on the last line is not balanced (balance is %s)."
+msgid ""
+"The journal entry that ends on the last line is not balanced (balance is "
+"%s)."
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,file_encoding:0
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
+#, python-format
+msgid "This is not a Zenergy Payroll file."
+msgstr ""
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__utf-8
 msgid "UTF-8"
 msgstr ""
 
@@ -527,19 +545,29 @@ msgid "Voucher field header or Column ('A' to 'Z')"
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:245
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "You must select a field separator."
 msgstr ""
 
 #. module: account_move_csv_import
-#: code:addons/account_move_csv_import/wizard/import_move.py:123
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
 #, python-format
 msgid "You must select a file format."
 msgstr ""
 
 #. module: account_move_csv_import
-#: selection:account.move.import,fec_txt_field_separator:0
-msgid "| (pipe)"
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__zenegy
+msgid "Zenegy løn"
 msgstr ""
 
+#. module: account_move_csv_import
+#: code:addons/account_move_csv_import/wizard/import_move.py:0
+#, python-format
+msgid "move should have more than 1 line (%s) %d"
+msgstr ""
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__fec_txt_field_separator__pipe
+msgid "| (pipe)"
+msgstr ""
