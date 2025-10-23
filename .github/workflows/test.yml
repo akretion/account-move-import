@@ -3,27 +3,45 @@ name: tests
 on:
   pull_request:
     branches:
-      - "12.0*"
+      - "15.0*"
   push:
     branches:
-      - "12.0"
-      - "12.0-ocabot-*"
+      - "15.0"
+      - "15.0-beta"
+      - "15.0-ocabot-*"
 
 jobs:
+  #unreleased-deps:
+  #  runs-on: ubuntu-latest
+  #  name: Detect unreleased dependencies
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #    - run: |
+  #        for reqfile in requirements.txt test-requirements.txt ; do
+  #            if [ -f ${reqfile} ] ; then
+  #                result=0
+  #                # reject non-comment lines that contain a / (i.e. URLs, relative paths)
+  #                grep "^[^#].*/" ${reqfile} || result=$?
+  #                if [ $result -eq 0 ] ; then
+  #                    echo "Unreleased dependencies found in ${reqfile}."
+  #                    exit 1
+  #                fi
+  #            fi
+  #        done
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: ${{ matrix.container }}
     name: ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - container: ghcr.io/steingabelgaard/oca-ci/py3.5-odoo12.0:latest
-            makepot: "true"
+          - container: ghcr.io/steingabelgaard/oca-ci18/py3.8-odoo15.0:latest
             name: test with Odoo
+            makepot: "true"
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:12.0
         env:
           POSTGRES_USER: odoo
           POSTGRES_PASSWORD: odoo
@@ -31,20 +49,32 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install addons and dependencies
         run: oca_install_addons
-      #- name: Check licenses
-      #  run: manifestoo -d . check-licenses
-      #- name: Check development status
-      #  run: manifestoo -d . check-dev-status --default-dev-status=Beta
+      - name: Check licenses
+        run: manifestoo -d . check-licenses
+        continue-on-error: true
+      - name: Check development status
+        run: manifestoo -d . check-dev-status --default-dev-status=Beta
+        continue-on-error: true
       - name: Initialize test db
         run: oca_init_test_database
       - name: Run tests
         run: oca_run_tests
-      - uses: codecov/codecov-action@v1
+      - name: Copy .pot files
+        run: sg_copy_and_commit_pot https://${{ secrets.GIT_PUSH_TOKEN }}@github.com/${{ github.repository }} 15.0-beta
+        if: ${{ matrix.makepot == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/15.0' && github.repository_owner == 'steingabelgaard' }}
       - name: Update .pot files
-        run: oca_export_and_push_pot https://x-access-token:${{ secrets.GIT_PUSH_TOKEN }}@github.com/${{ github.repository }}
-        if: ${{ matrix.makepot == 'true' && github.event_name == 'push' && github.repository_owner == 'OCA' }}
+        run: oca_export_and_push_pot https://${{ secrets.GIT_PUSH_TOKEN }}@github.com/${{ github.repository }}
+        if: ${{ matrix.makepot == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/15.0-beta' && github.repository_owner == 'steingabelgaard' }}
+      - name: Merge to beta - Sync .po/.pot files back
+        if: ${{ matrix.makepot == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/15.0' && github.repository_owner == 'steingabelgaard' }}
+        uses: mtanzi/action-automerge@v1
+        id: merge
+        with:
+          github_token: ${{ github.token }}
+          source: '15.0'
+          target: '15.0-beta'

@@ -14,7 +14,7 @@
         <field name="perm_write" eval="0"/>
         <field name="perm_unlink" eval="0"/>
     </record>
-    
+
     <record model="ir.model.access" id="account_move_import_map_item_access_system">
         <field name="name">account.move.import.map.item access system</field>
         <field name="model_id" ref="model_account_move_import_map_item"/>

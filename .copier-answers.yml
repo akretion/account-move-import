@@ -1,0 +1,28 @@
+# Do NOT update manually; changes here will be overwritten by Copier
+_commit: a7a2cb7
+_src_path: https://github.com/steingabelgaard/sg-addons-repo-template.git
+additional_ruff_rules: []
+ci: GitHub
+convert_readme_fragments_to_markdown: false
+enable_checklog_odoo: false
+generate_requirements_txt: true
+github_check_license: false
+github_ci_extra_env: {}
+github_enable_codecov: false
+github_enable_makepot: true
+github_enable_stale_action: false
+github_enforce_dev_status_compatibility: false
+include_wkhtmltopdf: false
+lint_mode: SG15COMPAT
+odoo_test_flavor: Odoo
+odoo_version: 15.0
+org_name: Stein & Gabelgaard ApS
+org_slug: steingabelgaard
+rebel_module_groups: []
+repo_description: Salary file import etc.
+repo_name: Account move import
+repo_slug: account-move-import
+repo_website: https://www.steingabelgaard.dk
+use_pyproject_toml: true
+use_ruff: true
+
