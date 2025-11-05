@@ -905,13 +905,13 @@ class AccountMoveImport(models.TransientModel):
                     "this ref is only on 1 move line", rec_ref)
                 continue
             total = 0.0
-            accounts = {}
-            partners = {}
+            accounts = set()
+            partners = set()
             for line in lines_to_rec:
                 total += line.credit
                 total -= line.debit
-                accounts[line.account_id] = True
-                partners[line.partner_id.id or False] = True
+                accounts.add(line.account_id)
+                partners.add(line.partner_id.id or False)
             if not comp_cur.is_zero(total):
                 logger.warning(
                     "Skip reconcile of ref '%s' because the lines with "
@@ -921,7 +921,7 @@ class AccountMoveImport(models.TransientModel):
                 logger.warning(
                     "Skip reconcile of ref '%s' because the lines with "
                     "this ref have different accounts (%s)",
-                    rec_ref, ', '.join([acc.code for acc in accounts.keys()]))
+                    rec_ref, ', '.join([acc.code for acc in accounts]))
                 continue
             if not list(accounts)[0].reconcile:
                 logger.warning(
@@ -933,7 +933,7 @@ class AccountMoveImport(models.TransientModel):
                 logger.warning(
                     "Skip reconcile of ref '%s' because the lines with "
                     "this ref have different partners (IDs %s)",
-                    rec_ref, ', '.join(partners.keys()))
+                    rec_ref, ', '.join([str(partner_id) for partner_id in partners]))
                 continue
             lines_to_rec.reconcile()
         logger.info('Reconcile imported moves finished')
