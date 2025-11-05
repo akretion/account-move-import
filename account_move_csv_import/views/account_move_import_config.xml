@@ -76,6 +76,7 @@
                     <field name="col_debit" required="show_col_config"/>
                     <field name="col_credit" required="show_col_config"/>
                     <field name="col_ref"/>
+                    <field name="col_date_maturity"/>
                     <field name="col_reconcile_ref"/>
                     <field name="col_move_name" invisible="keep_odoo_move_name"/>
                 </group>

@@ -16,6 +16,7 @@ COL_FIELDS = [
     'col_credit',
     'col_ref',
     'col_reconcile_ref',
+    'col_date_maturity',
     'col_move_name',
     ]
 
@@ -106,7 +107,14 @@ class AccountMoveImportConfig(models.Model):
     col_journal = fields.Selection("_sel_int2letter", string="Journal Code")
     col_date = fields.Selection(
         "_sel_int2letter", string="Date",
-        help="For XLSX/XLS/ODS format, this column must be in date format.")
+        help="For XLSX/XLS/ODS format, this column must be in date format "
+        "(or be in text format and written in the syntax configured in the "
+        "'Date Format' parameter).")
+    col_date_maturity = fields.Selection(
+        "_sel_int2letter", string="Due Date",
+        help="For XLSX/XLS/ODS format, this column must be in date format "
+        "(or be in text format and written in the syntax configured in the "
+        "'Date Format' parameter).")
     col_move_name = fields.Selection("_sel_int2letter", string="Journal Entry Number")
     col_reconcile_ref = fields.Selection(
         "_sel_int2letter", string="Reconcile Ref",

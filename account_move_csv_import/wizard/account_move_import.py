@@ -93,7 +93,8 @@ class AccountMoveImport(models.TransientModel):
     #    'debit': 0,
     #    'ref': '9804',  # optional
     #    'journal': 'VT',  # journal code
-    #    'date': '2017-02-15',  # as datetime or as string in '%Y-%m-%d'
+    #    'date': '2025-02-15',  # as datetime or as string in '%Y-%m-%d'
+    #    'date_maturity': '2025-03-14',  # same format as 'date'
     #    'move_name': 'OD/2022/1242',  # optional, for 'name' of account.move
     #                                  # only used when keep_odoo_move_name = False
     #    'reconcile_ref': 'A1242',  # will be written in import_reconcile
@@ -160,7 +161,7 @@ class AccountMoveImport(models.TransientModel):
         config = self.config_id.with_company(self.company_id.id)
         force_journal_code =\
             config.force_journal_id and config.force_journal_id.code or False
-        non_str_cols = ['date', 'debit', 'credit', 'line']
+        non_str_cols = ['date', 'date_maturity', 'debit', 'credit', 'line']
         for l in pivot:
             for key, value in l.items():
                 if value:
@@ -184,17 +185,23 @@ class AccountMoveImport(models.TransientModel):
 
     def _update_date_using_date_format(self, pivot):
         date_format = self.config_id.date_format
+        field2label = {
+            'date': _('Date'),
+            'date_maturity': _('Due Date'),
+            }
         for vals in pivot:
-            if vals.get("date") and isinstance(vals['date'], str):
-                try:
-                    vals["date"] = datetime.strptime(vals["date"], date_format)
-                except Exception:
-                    raise UserError(_(
-                        "Date parsing error on line %(line)s: '%(date)s' "
-                        "does not match date format '%(date_format)s'.",
-                        line=vals['line'],
-                        date=vals["date"],
-                        date_format=date_format))
+            for key, field_label in field2label.items():
+                if vals.get(key) and isinstance(vals[key], str):
+                    try:
+                        vals[key] = datetime.strptime(vals[key], date_format)
+                    except Exception:
+                        raise UserError(_(
+                            "Parsing error on line %(line)s for field '%(field_label)s': "
+                            "'%(date)s' does not match date format '%(date_format)s'.",
+                            line=vals['line'],
+                            field_label=field_label,
+                            date=vals[key],
+                            date_format=date_format))
 
     def _fec_txt2pivot(self, fileobj, file_bytes):
         fieldnames = [
@@ -385,7 +392,7 @@ class AccountMoveImport(models.TransientModel):
                             'Cannot get %s from row n°%s at position %s because len(row)=%s.',
                             pfield, line, position, len(row))
                         continue
-                    if pfield == "date" and isinstance(vals[pfield], (float, int)):
+                    if pfield in ("date", "date_maturity") and isinstance(vals[pfield], (float, int)) and vals[pfield]:
                         vals[pfield] = datetime(*xlrd.xldate_as_tuple(vals[pfield], wb.datemode))
             res.append(vals)
         return res
@@ -424,7 +431,7 @@ class AccountMoveImport(models.TransientModel):
                             'Cannot get %s from row n°%s at position %s because len(row)=%s.',
                             pfield, line, position, len(row))
                         continue
-                    if pfield == "date":
+                    if pfield in ("date", "date_maturity"):
                         # if it's a date cell in ODS, it will be given as string %Y-%m-%d
                         try:
                             vals[pfield] = datetime.strptime(vals[pfield], "%Y-%m-%d")
@@ -579,7 +586,14 @@ class AccountMoveImport(models.TransientModel):
                         l['date'] = datetime.strptime(l['date'], '%Y-%m-%d')
                     except Exception:
                         errors['other'].append(_(
-                            'Line %d: bad date format %s') % (l['line'], l['date']))
+                            "Line %d: field 'Date' has an invalid date '%s'") % (l['line'], l['date']))
+            if l.get('date_maturity'):
+                if not isinstance(l.get('date_maturity'), datelib):
+                    try:
+                        l['date_maturity'] = datetime.strptime(l['date_maturity'], '%Y-%m-%d')
+                    except Exception:
+                        errors['other'].append(_(
+                            "Line %d: field 'Due Date' has an invalid date '%s'") % (l['line'], l['date_maturity']))
             if not isinstance(l.get('credit'), (float, int)):
                 errors['other'].append(_(
                     'Line %d: bad value for credit (%s).')
@@ -686,6 +700,7 @@ class AccountMoveImport(models.TransientModel):
             'partner_id': pivot_line.get('partner_id'),
             'account_id': pivot_line['account_id'],
             'analytic_distribution': pivot_line.get('analytic_distribution'),
+            'date_maturity': pivot_line.get('date_maturity'),
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': f"{sequence}-{pivot_line.get('line')}",
             }
