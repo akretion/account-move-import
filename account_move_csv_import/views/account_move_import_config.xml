@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Copyright 2025 Akretion France (http://www.akretion.com/)
+  @author: Alexis de Lattre <alexis.delattre@akretion.com>
+  License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
+-->
+<odoo>
+
+
+<record id="account_move_import_config_form" model="ir.ui.view">
+    <field name="model">account.move.import.config</field>
+    <field name="arch" type="xml">
+        <form>
+            <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
+            <div class="oe_title">
+                <label
+                        for="name"
+                        string="Configuration Name"
+                        class="oe_edit_only"
+                    />
+                <h1>
+                    <field name="name" />
+                </h1>
+            </div>
+            <group name="main">
+                <group name="main-left" col="1">
+                    <group name="top-left">
+                        <field name="file_format" />
+                        <field name="sheet_number" invisible="not show_sheet_number" required="show_sheet_number"/>
+                        <field
+                            name="start_line"
+                            invisible="not show_start_line" required="show_start_line"
+                                />
+                        <field name="force_journal_id"/>
+                        <field name="force_move_date_required" invisible="file_format == 'fec_txt'"/>
+                        <div invisible="file_format != 'xlsx_xls_ods'" colspan="2">Parameter <strong>Date Format</strong> is ignored when the <em>Date</em> column is in date format.</div>
+                        <field name="date_format" invisible="not show_date_format"/>
+                        <!-- warning: encoding in present below AND in csv group -->
+                        <field name="encoding" invisible="not show_encoding" required="show_encoding"/>
+                        <field name="show_col_config" invisible="1"/>
+                        <field name="show_csv_config" invisible="1"/>
+                        <field name="show_start_line" invisible="1"/>
+                        <field name="show_encoding" invisible="1"/>
+                        <field name="show_sheet_number" invisible="1"/>
+                        <field name="show_date_format" invisible="1"/>
+                    </group>
+                    <group
+                            name="csv"
+                            invisible="not show_csv_config"
+                            string="CSV configuration"
+                        >
+                        <field name="encoding" required="show_csv_config"/>
+                        <field name="delimiter" required="show_csv_config"/>
+                        <field name="decimal_separator" required="show_csv_config"/>
+                        <field name="quoting" required="show_csv_config"/>
+                    </group>
+                    <group name="default_values" string="Default Values">
+                        <field name="default_post_move"/>
+                        <field name="default_force_move_ref"/>
+                        <field name="default_force_move_line_name"/>
+                    </group>
+                    <group name="advanced" string="Advanced Configuration">
+                        <field name="date_by_move_line"/>
+                        <field name="skip_null_lines"/>
+                        <field name="keep_odoo_move_name"/>
+                        <field name="split_move_method"/>
+                    </group>
+                </group>
+                <group name="columns" string="Columns Configuration" invisible="not show_col_config">
+                    <field name="col_date" required="show_col_config and not force_move_date_required"/>
+                    <field name="col_journal" invisible="force_journal_id" required="show_col_config and not force_journal_id"/>
+                    <field name="col_account" required="show_col_config"/>
+                    <field name="col_partner"/>
+                    <field name="col_analytic" groups="analytic.group_analytic_accounting"/>
+                    <field name="col_name"/>
+                    <field name="col_debit" required="show_col_config"/>
+                    <field name="col_credit" required="show_col_config"/>
+                    <field name="col_ref"/>
+                    <field name="col_reconcile_ref"/>
+                    <field name="col_move_name" invisible="keep_odoo_move_name"/>
+                </group>
+            </group>
+        </form>
+    </field>
+</record>
+
+<record id="account_move_import_config_tree" model="ir.ui.view">
+    <field name="model">account.move.import.config</field>
+    <field name="arch" type="xml">
+        <list>
+            <field name="sequence" widget="handle" />
+            <field name="name" decoration-bf="1" />
+            <field name="file_format" optional="show" />
+            <field name="force_journal_id" optional="show" />
+            <field name="default_post_move" optional="hide" />
+            <field name="default_force_move_ref" optional="hide" />
+            <field name="default_force_move_line_name" optional="hide" />
+            <field
+                name="company_id"
+                groups="base.group_multi_company"
+                optional="show"
+            />
+        </list>
+    </field>
+</record>
+
+<record id="account_move_import_config_search" model="ir.ui.view">
+    <field name="model">account.move.import.config</field>
+    <field name="arch" type="xml">
+        <search>
+            <field name="name" />
+            <separator/>
+            <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            <group name="groupby">
+                <filter
+                        name="file_format_groupby"
+                        string="File Format"
+                        context="{'group_by': 'file_format'}"
+                    />
+            </group>
+        </search>
+    </field>
+</record>
+
+<record id="account_move_import_config_action" model="ir.actions.act_window">
+    <field name="name">Journal Entries Import Configurations</field>
+    <field name="res_model">account.move.import.config</field>
+    <field name="view_mode">list,form</field>
+</record>
+
+<menuitem
+        id="account_move_import_config_menu"
+        action="account_move_import_config_action"
+        sequence="160"
+        parent="account.account_account_menu"
+    />
+
+
+</odoo>
