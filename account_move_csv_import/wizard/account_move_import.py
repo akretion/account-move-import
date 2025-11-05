@@ -782,8 +782,8 @@ class AccountMoveImport(models.TransientModel):
                         else:
                             errors['analytic'].setdefault(ana_account_code, []).append(l['line'])
 
-            if l['journal'] in speeddict['journal']:
-                l['journal_id'] = speeddict['journal'][l['journal']]
+            if str(l['journal']).upper() in speeddict['journal']:
+                l['journal_id'] = speeddict['journal'][str(l['journal']).upper()]
             else:
                 errors['journal'].setdefault(l['journal'], []).append(l['line'])
             if not l.get('date'):
