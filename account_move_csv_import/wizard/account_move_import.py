@@ -47,6 +47,7 @@ class AccountMoveImport(models.TransientModel):
     filename = fields.Char()
     config_id = fields.Many2one(
         "account.move.import.config", required=True, check_company=True,
+        string="Import Configuration",
         domain="[('company_id', 'in', (False, company_id))]",
         compute="_compute_config_id", store=True, readonly=False, precompute=True)
     post_move = fields.Boolean(

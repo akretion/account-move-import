@@ -80,11 +80,11 @@ class AccountMoveImportConfig(models.Model):
         ('balanced', 'Balanced'),
         ('move_name', 'Journal Entry Number'),
         ], default='balanced', required=True,
-        help="If you select the method 'Balanced', Odoo will cut the move "
-        "when a group of lines is balanced with the same journal and date. "
+        help="If you select the method 'Balanced', Odoo will create a new journal entry "
+        "when a group of journal items is balanced with the same journal and date. "
         "If you select the method 'Journal Entry Number', "
-        "Odoo will cut the move using the field 'move_name' "
-        "of the pivot format (this field is optional, "
+        "Odoo will create a new journal entry when the field 'move_name' "
+        "of the pivot format changes (this field is optional, "
         "but it will have to be present if you select this method).")
     # COLUMN config
     show_col_config = fields.Boolean(compute="_compute_show")
@@ -99,20 +99,20 @@ class AccountMoveImportConfig(models.Model):
     col_name = fields.Selection("_sel_int2letter", string="Journal Item Label")
     col_debit = fields.Selection(
         "_sel_int2letter", string="Debit",
-        help="For XLSX/XLS/ODS format, this column must be in number format.")
+        help="For XLSX/XLS/ODS formats, this column must be in number format.")
     col_credit = fields.Selection(
         "_sel_int2letter", string="Credit",
-        help="For XLSX/XLS/ODS format, this column must be in number format.")
+        help="For XLSX/XLS/ODS formats, this column must be in number format.")
     col_ref = fields.Selection("_sel_int2letter", string="Reference")
     col_journal = fields.Selection("_sel_int2letter", string="Journal Code")
     col_date = fields.Selection(
         "_sel_int2letter", string="Date",
-        help="For XLSX/XLS/ODS format, this column must be in date format "
+        help="For XLSX/XLS/ODS formats, this column must be in date format "
         "(or be in text format and written in the syntax configured in the "
         "'Date Format' parameter).")
     col_date_maturity = fields.Selection(
         "_sel_int2letter", string="Due Date",
-        help="For XLSX/XLS/ODS format, this column must be in date format "
+        help="For XLSX/XLS/ODS formats, this column must be in date format "
         "(or be in text format and written in the syntax configured in the "
         "'Date Format' parameter).")
     col_move_name = fields.Selection("_sel_int2letter", string="Journal Entry Number")
@@ -175,7 +175,7 @@ class AccountMoveImportConfig(models.Model):
         (
             "name_company_uniq",
             "unique(name, company_id)",
-            "An export already exists with the same name.",
+            "An import configuration already exists with the same name.",
         ),
         (
             "start_line_positive",

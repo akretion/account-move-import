@@ -4,10 +4,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 16.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-11-03 14:56+0000\n"
-"PO-Revision-Date: 2023-11-03 14:57+0000\n"
+"POT-Creation-Date: 2025-11-05 23:04+0000\n"
+"PO-Revision-Date: 2025-11-05 23:05+0000\n"
 "Last-Translator: Alexis de Lattre <alexis.delattre@akretion.com>\n"
 "Language-Team: \n"
 "Language: fr\n"
@@ -17,96 +17,60 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "<em>Columns</em>:"
-msgstr "<em>Colonnes</em> :"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "<em>Decimal separator</em>: . (dot) or , (coma)"
-msgstr "<em>Séparateur décimal</em> : . (point) ou , (virgule)"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "<em>Encoding</em>: UTF-8"
-msgstr "<em>Encodage</em> : UTF-8"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "<em>Field separator</em>: auto-detected"
-msgstr "<em>Séparateur de champ</em> : auto-détecté"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "<em>Text separator</em>: \" (quote)"
-msgstr "<em>Séparateur de texte</em> : \" (guillemets)"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid ""
-"A. Date (must be a date field in the spreadsheet)<br/>\n"
-"                    B. Journal Code<br/>\n"
-"                    C. Account Code<br/>\n"
-"                    D. Partner Reference<br/>\n"
-"                    E. Analytic (analytic account reference written as "
-"<code>CODE1</code>, or analytic distribution written as <code>CODE1:40|"
-"CODE2:60</code>)<br/>\n"
-"                    F. Label<br/>\n"
-"                    G. Debit<br/>\n"
-"                    H. Credit<br/>\n"
-"                    I. Ref (used as Journal Entry Ref)<br/>\n"
-"                    J. Reconcile Ref (used for reconciliation after "
-"import)<br/>"
-msgstr ""
-"A. Date (doit être un champ de date dans le tableur)<br/>\n"
-"                    B. Code journal<br/>\n"
-"                    C. Code du compte<br/>\n"
-"                    D. Référence du partenaire<br/>\n"
-"                    E. Analytique (référence du compte analytique écrite "
-"comme <code>CODE1</code>, ou la distribution analytique écrite comme "
-"<code>CODE1:40|CODE2:60</code>)<br/>\n"
-"                    F. Libellé<br/>\n"
-"                    G. Débit<br/>\n"
-"                    H. Crédit<br/>\n"
-"                    I. Référence (utilisé comme référence de la pièce comptable)<br/>\n"
-"                    J. Reférence de lettrage (utilisé pour le lettrage après "
-"import)<br/>"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__ascii
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__encoding__ascii
 msgid "ASCII"
 msgstr "ASCII"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Account code"
-msgstr "Code du compte comptable"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_account
+msgid "Account Code"
+msgstr "Code du compte"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__advanced_options
-msgid "Advanced Options"
-msgstr "Options avancées"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__active
+msgid "Active"
+msgstr "Actif"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid ""
-"Analytic (analytic account reference written as <code>CODE1</code>, or "
-"analytic distribution written as <code>CODE1:40|CODE2:60</code>)"
-msgstr ""
-"Analytique (référence du compte analytique sous la forme <code>CODE1</code>, "
-"ou distribution analytique sous la forme <code>CODE1:40|CODE2:60</code>)"
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid "Advanced Configuration"
+msgstr "Configuration avancée"
 
 #. module: account_move_csv_import
-#. odoo-python
-#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
-msgid "Are you sure this file is an XLSX, XLS or ODS file?"
-msgstr "Êtes-vous sûr que ce fichier est un fichier XLSX, XLS ou ODS ?"
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__quoting__all
+msgid "All"
+msgstr "Tous"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__split_move_method__balanced
+#: model:ir.model.constraint,message:account_move_csv_import.constraint_account_move_import_config_name_company_uniq
+msgid "An import configuration already exists with the same name."
+msgstr "Une configuration d'import portant le même nom existe déjà."
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_analytic
+msgid "Analytic Account Code"
+msgstr "Code du compte analytique"
+
+#. module: account_move_csv_import
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_search
+msgid "Archived"
+msgstr "Archivé"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__split_move_method__balanced
 msgid "Balanced"
 msgstr "Équilibré"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__file_format__csv
+msgid "CSV"
+msgstr "CSV"
+
+#. module: account_move_csv_import
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid "CSV configuration"
+msgstr "Configuration CSV"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,help:account_move_csv_import.field_account_move_line__import_external_id
@@ -114,8 +78,9 @@ msgid ""
 "Can be used to tag imported journal items. Can be useful to delete imported "
 "journal items in case of error on the imported file."
 msgstr ""
-"Peut être utilisé pour tagger les écritures comptables importées. Peut être utile pour "
-"supprimer les écritures comptables en cas d'erreur dans le fichier importé."
+"Peut être utilisé pour tagger les écritures comptables importées. Peut être "
+"utile pour supprimer les écritures comptables en cas d'erreur dans le "
+"fichier importé."
 
 #. module: account_move_csv_import
 #: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
@@ -123,83 +88,113 @@ msgid "Cancel"
 msgstr "Annuler"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__cielpaye
-msgid "Ciel Paye"
-msgstr "Ciel Paye"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Columns of the Generic XLSX/XLS/ODS format"
-msgstr "Colonnes du format XLSX/XLS/ODS générique"
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid "Columns Configuration"
+msgstr "Configuration des colonnes"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__company_id
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__company_id
 msgid "Company"
 msgstr "Société"
 
 #. module: account_move_csv_import
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid "Configuration Name"
+msgstr "Nom de la configuration"
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+msgid ""
+"Could not detect the field delimited. Please check that file '%(filename)s' "
+"it is a text FEC file."
+msgstr ""
+"Impossible de détecter le caractère de délimitation. Veuillez vérifier que le "
+"fichier '%(filename)s' est bien un fichier FEC au format texte."
+
+#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__create_uid
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__create_uid
 msgid "Created by"
 msgstr "Créé par"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__create_date
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__create_date
 msgid "Created on"
 msgstr "Créé le"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_credit
 msgid "Credit"
 msgstr "Crédit"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Date (DD/MM/YYYY or configurable)"
-msgstr "Date (JJ/MM/AAAA ou configurable)"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__date_format
-msgid "Date Format"
-msgstr "Format de date"
-
-#. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
-msgid "Date parsing error: '%s' in line %s does not match date format '%s'."
-msgstr ""
-"Erreur de lecture de date : '%s' à la ligne %s ne correspond pas au format "
-"de date '%s'."
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_date
+msgid "Date"
+msgstr "Date"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__date_format
+msgid "Date Format"
+msgstr "Format des dates"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_debit
 msgid "Debit"
 msgstr "Débit"
 
 #. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__decimal_separator
+msgid "Decimal Separator"
+msgstr "Séparateur décimal"
+
+#. module: account_move_csv_import
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid "Default Values"
+msgstr "Valeurs par défaut"
+
+#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__display_name
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__display_name
 msgid "Display Name"
 msgstr "Nom affiché"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__keep_odoo_move_name
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__keep_odoo_move_name
 msgid "Don't Force Journal Entry Name"
-msgstr "Ne pas forcer les numéros de pièce comptable"
+msgstr "Ne pas forcer le nom de la pièce comptable"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__fec_txt
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_date_maturity
+msgid "Due Date"
+msgstr "Date d'échéance"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__encoding
+msgid "Encoding"
+msgstr "Encodage"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__file_format__fec_txt
 msgid "FEC (text)"
 msgstr "FEC (texte)"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__file_encoding
-msgid "File Encoding"
-msgstr "Encodage du fichier"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__delimiter
+msgid "Field Delimiter"
+msgstr "Délimiteur de champ"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__file_format
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__file_format
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_search
 msgid "File Format"
-msgstr "Format de fichier"
+msgstr "Format du fichier"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__file_to_import
@@ -212,108 +207,136 @@ msgid "Filename"
 msgstr "Nom du fichier"
 
 #. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+msgid ""
+"Float parsing error on line %(line)s: '%(value)s' could not be converted to "
+"a float. Error: %(err)s"
+msgstr ""
+"Erreur de lecture des nombres décimaux à la ligne %(line)s: '%(value)s' n'a "
+"pas pu être converti en nombre décimal. Erreur : %(err)s"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__date_format
+msgid ""
+"For XLSX/XLS/ODS format, this configuration is used only when the date "
+"column is in text format instead of date format ; otherwise it is ignored.\n"
+"Syntax:\n"
+"%d for day,\n"
+"%m for month,\n"
+"%Y for year on 4 digits,\n"
+"%y for year on 2 digits."
+msgstr ""
+"Pour les formats XLSX/XLS/ODS, cette configuration n'est utilisée que "
+"lorsque la colonne de date est au format texte au lieu du format date ; "
+"sinon, elle est ignorée.\n"
+"Syntaxe :\n"
+"%d pour le jour,\n"
+"%m pour le mois,\n"
+"%Y pour l'année sur 4 chiffres,\n"
+"%y pour l'année sur 2 chiffres."
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_date
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_date_maturity
+msgid ""
+"For XLSX/XLS/ODS formats, this column must be in date format (or be in text "
+"format and written in the syntax configured in the 'Date Format' parameter)."
+msgstr ""
+"Pour les formats XLSX/XLS/ODS, cette colonne doit être au format date (ou "
+"être au format texte et écrite dans la syntaxe configurée dans le paramètre "
+"'Format des dates')."
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_credit
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_debit
+msgid "For XLSX/XLS/ODS formats, this column must be in number format."
+msgstr ""
+"Pour les formats XLSX/XLS/ODS, cette colonne doit être au format numérique."
+
+#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_move_date
 msgid "Force Date"
 msgstr "Forcer la date"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_move_date_required
-msgid "Force Date Required"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__force_move_date_required
+msgid "Force Date is Required in Wizard"
 msgstr "Forcer la date est requis"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_journal_id
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__force_journal_id
 msgid "Force Journal"
 msgstr "Forcer le journal"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_journal_required
-msgid "Force Journal Required"
-msgstr "Forcer le journal est requis"
-
-#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_move_line_name
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__default_force_move_line_name
 msgid "Force Label"
 msgstr "Forcer le libellé"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_move_line_name_required
-msgid "Force Label Required"
-msgstr "Forcer le libellé est requis"
-
-#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__force_move_ref
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__default_force_move_ref
 msgid "Force Reference"
 msgstr "Forcer la référence"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__genericcsv
-msgid "Generic CSV"
-msgstr "CSV générique"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__genericxlsx
-msgid "Generic XLSX/XLS/ODS"
-msgstr "XLSX/XLS/ODS générique"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__file_with_header
-msgid "Has Header Line"
-msgstr "Contient une ligne d'en-tête"
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Hide Advanced Options"
-msgstr "Masquer les options avancées"
-
-#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__id
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__id
 msgid "ID"
 msgstr "ID"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__latin1
-msgid "ISO 8859-15 (alias Latin1)"
-msgstr "ISO 8859-15 (alias Latin1)"
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__encoding__iso8859_15
+msgid "ISO-8859-15"
+msgstr "ISO-8859-15"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__keep_odoo_move_name
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__keep_odoo_move_name
 msgid ""
 "If 'move_name' is present in the pivot format and this option is enabled, it "
 "will ignore the value of 'move_name' and use the sequence generated by Odoo "
 "when posting the journal entry."
 msgstr ""
-"Si 'move_name' est présent dans le format pivot et cette option est activée, "
-"la valeur de 'move_name' sera ignorée et la séquence générée par Odoo sera "
-"utilisée lors de la comptabilisation de la pièce."
+"Si 'move_name' est présent dans le format pivot et que cette option est "
+"activée, il ignorera la valeur de 'move_name' et utilisera la séquence "
+"générée par Odoo lors de la comptabilisation de la pièce comptable."
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__post_move
-msgid "If True, the journal entry will be posted after the import."
-msgstr "Si coché, la pièce comptable sera comptabilisée après import."
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__default_post_move
+msgid ""
+"If enabled, the journal entries will be posted and, if the Reconcile Ref is "
+"available in the import file, Odoo will reconcile the journal items."
+msgstr ""
+"Si coché, la pièce comptable sera comptabilisée et, si les marques de "
+"lettrage sont renseignées dans le fichier d'import, Odoo va lettrer les "
+"écritures comptables concernées."
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__date_by_move_line
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__date_by_move_line
 msgid "If enabled, we don't use date to detect the split of journal entries."
 msgstr ""
-"Si coché, la date ne sera pas utilisée pour le découpage des pièces "
-"comptables."
+"Si cette option est activée, nous n'utilisons pas la date pour détecter le "
+"fractionnement en pièces comptables."
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__split_move_method
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__split_move_method
 msgid ""
-"If you select the method 'Balanced', Odoo will cut the move when a group of "
-"lines is balanced with the same journal and date. If you select the method "
-"'Journal Entry Number', Odoo will cut the move using the field 'move_name' "
-"of the pivot format (this field is optional, but it will have to be present "
-"if you select this method)."
+"If you select the method 'Balanced', Odoo will create a new journal entry "
+"when a group of journal items is balanced with the same journal and date. If "
+"you select the method 'Journal Entry Number', Odoo will create a new journal "
+"entry when the field 'move_name' of the pivot format changes (this field is "
+"optional, but it will have to be present if you select this method)."
 msgstr ""
 "Si vous sélectionnez la méthode 'Équilibré', Odoo créera une nouvelle pièce "
-"quand un groupe de lignes ayant le même journal et la même date est "
-"équilibré. Si vous sélectionnez la méthode 'Numéro de pièce comptable', Odoo "
-"découpera les pièces en utilisant le champ 'move_name' du format pivot (ce "
-"champ est optionnel, mais il devra être présent si vous sélectionnez cette "
-"méthode."
+"comptable lorsqu'un groupe d'écritures comptables avec le même "
+"journal et la même date est équilibré. Si vous sélectionnez la méthode 'Numéro de pièce "
+"comptable', Odoo créera une nouvelle pièce comptable lorsque le champ "
+"'move_name' du format pivot change (ce champ est facultatif, mais il devra "
+"être présent si vous sélectionnez cette méthode)."
 
 #. module: account_move_csv_import
 #: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
@@ -321,20 +344,20 @@ msgid "Import"
 msgstr "Importer"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Import Account Move"
-msgstr "Import pièce comptable"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__config_id
+msgid "Import Configuration"
+msgstr "Configuration d'import"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_line__import_external_id
-msgid "Import External"
+msgid "Import External ID"
 msgstr "ID externe de l'import"
 
 #. module: account_move_csv_import
 #: model:ir.actions.act_window,name:account_move_csv_import.account_move_import_action
 #: model:ir.ui.menu,name:account_move_csv_import.account_move_import_menu
 msgid "Import Journal Entries"
-msgstr "Import de pièces comptables"
+msgstr "Importer des pièces comptables"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_line__import_reconcile
@@ -344,31 +367,32 @@ msgstr "Marque de lettrage pour l'import"
 #. module: account_move_csv_import
 #: model:ir.model,name:account_move_csv_import.model_account_move_import
 msgid "Import account move from file"
-msgstr "Import pièce comptable depuis un fichier"
+msgstr "Importer des pièces comptables depuis un fichier"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__extenso
-msgid "In Extenso"
-msgstr "In Extenso"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__file_with_header
-msgid "Indicate if the first line is a header line and should be ignored."
-msgstr ""
-"Indique si la première ligne est une ligne d'en-tête et doit être ignorée."
-
-#. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Information about the Generic CSV format"
-msgstr "Informations sur le format CSV générique"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__date_by_move_line
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__date_by_move_line
 msgid "Is date by move line ?"
-msgstr "Date par ligne comptable ?"
+msgstr "Date par ligne d'écriture ?"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__split_move_method__move_name
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_journal
+msgid "Journal Code"
+msgstr "Code du journal"
+
+#. module: account_move_csv_import
+#: model:ir.model,name:account_move_csv_import.model_account_move_import_config
+msgid "Journal Entries Import Configuration"
+msgstr "Configuration d'import de pièces comptables"
+
+#. module: account_move_csv_import
+#: model:ir.actions.act_window,name:account_move_csv_import.account_move_import_config_action
+#: model:ir.ui.menu,name:account_move_csv_import.account_move_import_config_menu
+msgid "Journal Entries Import Configurations"
+msgstr "Configurations d'import de pièces comptables"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_move_name
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__split_move_method__move_name
 msgid "Journal Entry Number"
 msgstr "Numéro de pièce comptable"
 
@@ -378,14 +402,13 @@ msgid "Journal Item"
 msgstr "Écriture comptable"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Journal code"
-msgstr "Code journal"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_name
+msgid "Journal Item Label"
+msgstr "Libellé de l'écriture comptable"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid ""
 "Journal entry on line %d only has 1 line.\n"
 "\n"
@@ -396,7 +419,7 @@ msgstr ""
 "Données de débug: %s"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import__force_journal_id
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__force_journal_id
 msgid ""
 "Journal in which the journal entry will be created, even if the file "
 "indicate another journal."
@@ -405,64 +428,56 @@ msgstr ""
 "indique un autre journal."
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Label"
-msgstr "Libellé"
-
-#. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import____last_update
-msgid "Last Modified on"
-msgstr "Dernière modification le"
-
-#. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__write_uid
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__write_uid
 msgid "Last Updated by"
 msgstr "Dernière mise à jour par"
 
 #. module: account_move_csv_import
 #: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__write_date
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__write_date
 msgid "Last Updated on"
 msgstr "Dernière mise à jour le"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
-msgid "Line %d: bad date format %s"
-msgstr "Ligne %d : mauvais format de date %s"
-
-#. module: account_move_csv_import
-#. odoo-python
-#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "Line %d: bad value for credit (%s)."
 msgstr "Ligne %d : mauvaise valeur pour le champ crédit (%s)"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "Line %d: bad value for debit (%s)."
 msgstr "Ligne %d : mauvaise valeur pour le champ débit (%s)"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
+msgid "Line %d: field 'Date' has an invalid date '%s'"
+msgstr "Ligne %d: le champ 'Date' a une date invalide '%s'"
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+msgid "Line %d: field 'Due Date' has an invalid date '%s'"
+msgstr "Ligne %d: le champ 'Date d'échéance' a une date invalide '%s'"
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
 msgid "Line %d: missing date."
 msgstr "Ligne %d : date manquante."
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "Line %d: missing journal entry number."
 msgstr "Ligne %d : numéro de pièce comptable manquant."
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid ""
 "List of %s that don't exist in Odoo:\n"
 "%s\n"
@@ -475,7 +490,6 @@ msgstr ""
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid ""
 "List of misc errors:\n"
 "%s"
@@ -484,70 +498,177 @@ msgstr ""
 "%s"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__nibelis
-msgid "Nibelis (Prisme)"
-msgstr "Nibelis (Prisme)"
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+msgid "Method '%s' doesn't exist. This should never happen."
+msgstr "La méthode '%s' n'existe pas. Cela ne devrait jamais se produire."
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Partner internal reference"
-msgstr "Référence interne de partenaire"
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__quoting__minimal
+msgid "Minimal"
+msgstr "Minimale"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__payfit
-msgid "Payfit"
-msgstr "Payfit"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__name
+msgid "Name"
+msgstr "Nom"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__post_move
-msgid "Post Journal Entry"
-msgstr "Comptabiliser la pièce"
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__quoting__none
+msgid "None"
+msgstr "Aucun"
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/models/account_move_import_config.py:0
+msgid ""
+"On configuration '%(config)s', the column '%(col)s' is not configured (this "
+"column is required)."
+msgstr ""
+"Sur la configuration '%(config)s', la colonne '%(col)s' n'est pas configurée "
+"(cette colonne est obligatoire)."
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/models/account_move_import_config.py:0
+msgid ""
+"On configuration '%(config)s', the column '%(col1)s' is configured with the "
+"same position as column '%(col2)s'."
+msgstr ""
+"Sur la configuration '%(config)s', la colonne '%(col1)s' est configurée avec "
+"la même position que la colonne '%(col2)s'."
+
+#. module: account_move_csv_import
+#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_config_form
+msgid ""
+"Parameter <strong>Date Format</strong> is ignored when the <em>Date</em> "
+"column is in date format."
+msgstr ""
+"Le paramètre <strong>Format de dates</strong> est ignoré lorsque la colonne "
+"<em>Date</em> est au format date."
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid ""
-"Python lib 'rows' 0.4.1 is buggy. You should checkout the code from https://"
-"github.com/turicas/rows"
+"Parsing error on line %(line)s for field '%(field_label)s': '%(date)s' does "
+"not match date format '%(date_format)s'."
 msgstr ""
-"La librairie Python 'rows' 0.4.1 est boguée. Vous devriez récupérer le code "
-"à partir de https://github.com/turicas/rows"
+"Erreur de lecture à la ligne %(line)s pour le champ '%(field_label)s' : "
+"'%(date)s' ne correspond pas au format de date '%(date_format)s'."
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_format__quadra
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_partner
+msgid "Partner Code"
+msgstr "Code partenaire"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__post_move
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__default_post_move
+msgid "Post and Reconcile"
+msgstr "Comptabiliser et lettrer"
+
+#. module: account_move_csv_import
+#: model:account.analytic.account,name:account_move_csv_import.analytic_purchase
+msgid "Purchase"
+msgstr "Achat"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__file_format__quadra
 msgid "Quadra (without analytic)"
 msgstr "Quadra (sans analytique)"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Reconcile ref (used for reconciliation after import)"
-msgstr "Marque de lettrage (utilisée pour le lettrage après import)"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__quoting
+msgid "Quoting"
+msgstr "Quoting"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Ref (used as Journal Entry Ref)"
-msgstr "Référence (utilisé comme Référence de la pièce)"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_reconcile_ref
+msgid "Reconcile Ref"
+msgstr "Référence de lettrage"
 
 #. module: account_move_csv_import
-#: model_terms:ir.ui.view,arch_db:account_move_csv_import.account_move_import_form
-msgid "Show Advanced Options"
-msgstr "Afficher les options avancées"
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__col_ref
+msgid "Reference"
+msgstr "Référence"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__skip_null_lines
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__sequence
+msgid "Sequence"
+msgstr "Séquence"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__sheet_number
+msgid "Sheet Number"
+msgstr "Numéro de la feuille"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__sheet_number
+msgid "Sheet number to read. First sheet corresponds to sheet number 1."
+msgstr ""
+"Numéro de la feuille à lire. La première feuille correspond à la feuille "
+"numéro 1."
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_col_config
+msgid "Show Col Config"
+msgstr "Show Col Config"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_csv_config
+msgid "Show Csv Config"
+msgstr "Afficher la configuration CSV"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_date_format
+msgid "Show Date Format"
+msgstr "Afficher le format des dates"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_encoding
+msgid "Show Encoding"
+msgstr "Afficher l'encodage"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_sheet_number
+msgid "Show Sheet Number"
+msgstr "Afficher le numéro de la feuille"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__show_start_line
+msgid "Show Start Line"
+msgstr "Afficher la ligne de départ"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__skip_null_lines
 msgid "Skip lines with debit = credit = 0"
-msgstr "Sauter les lignes avec crédit = débit = 0"
+msgstr "Sauter les lignes avec débit = crédit = 0"
 
 #. module: account_move_csv_import
-#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import__split_move_method
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__split_move_method
 msgid "Split Move Method"
-msgstr "Méthode de découpage en pièces"
+msgstr "Méthode du fractionnement des pièces"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,field_description:account_move_csv_import.field_account_move_import_config__start_line
+msgid "Start Line"
+msgstr "Ligne de départ"
+
+#. module: account_move_csv_import
+#: model:account.analytic.account,name:account_move_csv_import.analytic_support
+msgid "Support and operations"
+msgstr "Support et opérations"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
+msgid "The file '%s' is not an XLSX, XLS nor ODS file."
+msgstr "Le fichier '%s' n'est pas un fichier XLSX, XLS ou ODS."
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
 msgid ""
 "The journal entry that ends on the last line is not balanced (balance is %s)."
 msgstr ""
@@ -555,66 +676,114 @@ msgstr ""
 "solde est %s)."
 
 #. module: account_move_csv_import
-#. odoo-python
-#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
-msgid ""
-"To import ods files, you must install the rows lib from https://github.com/"
-"turicas/rows"
-msgstr ""
-"Pour importer des fichiers ods, vous devez installer la librairie rows à "
-"partir de https://github.com/turicas/rows"
+#: model:ir.model.constraint,message:account_move_csv_import.constraint_account_move_import_config_sheet_number_positive
+msgid "The sheet number must be strictly positive."
+msgstr "Le numéro de la feuille doit être strictement positif."
 
 #. module: account_move_csv_import
-#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import__file_encoding__utf-8
+#: model:ir.model.constraint,message:account_move_csv_import.constraint_account_move_import_config_start_line_positive
+msgid "The start line must be strictly positive."
+msgstr "La ligne de départ doit être strictement positive."
+
+#. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_analytic
+msgid ""
+"This column can contain the code of an analytic account or an analytic "
+"distribution written as 'CODE1:40|CODE2:60' for a distribution with 40% on "
+"analytic account CODE1 and 60% on analytic account CODE2."
+msgstr ""
+"Cette colonne peut contenir le code d'un compte analytique ou d'une "
+"distribution analytique, par exemple 'CODE1:40|CODE2:60' pour une "
+"distribution avec 40% sur le compte analytique CODE1 et 60% sur le compte "
+"analytique CODE2."
+
+#. module: account_move_csv_import
+#. odoo-python
+#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
+msgid ""
+"To import ods files, you must install the odsparsator python library. See "
+"https://pypi.org/project/odsparsator"
+msgstr ""
+"Pour importer des fichiers ods, vous devez installer la bibliothèque python "
+"odsparsator. Cf https://pypi.org/project/odsparsator"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__encoding__utf-8
 msgid "UTF-8"
 msgstr "UTF-8"
 
 #. module: account_move_csv_import
+#: model:ir.model.fields,help:account_move_csv_import.field_account_move_import_config__col_reconcile_ref
+msgid ""
+"Used for reconciliation of the imported journal items if the option 'Post "
+"and Reconcile' is enabled."
+msgstr ""
+"Utilisé pour le lettrage des écritures comptables importées si l'option "
+"\"Comptabilisation et lettrage\" est activée."
+
+#. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "Wrong Move Split Method."
-msgstr "Mauvaise méthode de découpage en pièces"
+msgstr "Mauvaise méthode de fractionnement en pièces"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__file_format__xlsx_xls_ods
+msgid "XLSX/XLS/ODS"
+msgstr "XLSX/XLS/ODS"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
-msgid "You must select a file format."
-msgstr "Vous devez sélectionner un format de fichier."
-
-#. module: account_move_csv_import
-#. odoo-python
-#: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "You must upload a file to import."
 msgstr "Vous devez téléverser un fichier à importer."
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "account codes"
 msgstr "codes de comptes comptables"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "analytic codes"
 msgstr "codes analytiques"
 
 #. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__decimal_separator__,
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__delimiter__,
+msgid "coma"
+msgstr "virgule"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__decimal_separator___
+msgid "dot"
+msgstr "point"
+
+#. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "journal codes"
 msgstr "codes journaux"
 
 #. module: account_move_csv_import
 #. odoo-python
 #: code:addons/account_move_csv_import/wizard/account_move_import.py:0
-#, python-format
 msgid "partner reference"
 msgstr "référence partenaire"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__delimiter__|
+msgid "pipe"
+msgstr "pipe"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__delimiter__;
+msgid "semi-colon"
+msgstr "point-virgule"
+
+#. module: account_move_csv_import
+#: model:ir.model.fields.selection,name:account_move_csv_import.selection__account_move_import_config__delimiter__tab
+msgid "tab"
+msgstr "tabulation"
