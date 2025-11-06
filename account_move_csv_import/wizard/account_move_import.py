@@ -133,7 +133,7 @@ class AccountMoveImport(models.TransientModel):
             fileobj.seek(0)  # We must start reading from the beginning !
             pivot = self._file2pivot(fileobj, file_bytes)
         logger.debug('pivot before update: %s', pivot)
-        self._update_pivot(pivot)
+        pivot = self._update_pivot(pivot)
         moves = self._create_moves_from_pivot(pivot, post=self.post_move)
         if self.post_move:
             self._reconcile_move_lines(moves)
@@ -183,6 +183,9 @@ class AccountMoveImport(models.TransientModel):
                 l['ref'] = force_move_ref
             if force_journal_code:
                 l['journal'] = force_journal_code
+        # remove lines without account (useful to auto-remove a total line at the end)
+        pivot_no_lines_without_account = [l for l in pivot if l.get('account')]
+        return pivot_no_lines_without_account
 
     def _update_date_using_date_format(self, pivot):
         date_format = self.config_id.date_format
