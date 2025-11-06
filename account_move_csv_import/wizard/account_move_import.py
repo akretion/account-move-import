@@ -440,7 +440,7 @@ class AccountMoveImport(models.TransientModel):
                 'date': row[0].value,
                 'journal': row[1].value,
                 'account': str(row[2].value),
-                'partner': row[3].value or False,
+                'partner': row[3].value and str(row[3].value) or False,
                 'analytic': row[4].value or False,
                 'name': row[5].value,
                 'debit': row[6].value,
@@ -473,11 +473,16 @@ class AccountMoveImport(models.TransientModel):
                 account = str(int(account))
             elif isinstance(account, int):
                 account = str(account)
+            partner = row[3].value
+            if isinstance(partner, float):
+                partner = str(int(partner))
+            elif isinstance(partner, int):
+                partner = str(partner)
             vals = {
                 'date': datetime(*xlrd.xldate_as_tuple(row[0].value, wb.datemode)),
                 'journal': row[1].value,
                 'account': account,
-                'partner': row[3].value or False,
+                'partner': partner or False,
                 'analytic': row[4].value or False,
                 'name': row[5].value,
                 'debit': row[6].value,
