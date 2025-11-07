@@ -22,6 +22,8 @@
                 <field name="force_move_ref" />
                 <field name="force_move_line_name"/>
                 <field name="force_move_date_required" invisible="1"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
             </group>
             <footer>
                 <button name="run_import" type="object" string="Import" class="btn-primary" />

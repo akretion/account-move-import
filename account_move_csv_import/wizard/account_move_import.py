@@ -63,6 +63,8 @@ class AccountMoveImport(models.TransientModel):
         compute="_compute_default_values", store=True, readonly=False, precompute=True)
     force_move_date = fields.Date('Force Date')
     force_move_date_required = fields.Boolean(related="config_id.force_move_date_required")
+    start_date = fields.Date()
+    end_date = fields.Date()
 
     @api.depends('company_id')
     def _compute_config_id(self):
@@ -184,7 +186,8 @@ class AccountMoveImport(models.TransientModel):
             if force_journal_code:
                 l['journal'] = force_journal_code
         # remove lines without account (useful to auto-remove a total line at the end)
-        pivot_no_lines_without_account = [l for l in pivot if l.get('account')]
+        # + remove lines which are not between start and end date if defined
+        pivot_no_lines_without_account = [l for l in pivot if l.get('account') and (not self.start_date or l["date"].date() >= self.start_date) and (not self.end_date or l["date"].date() <= self.end_date)]
         return pivot_no_lines_without_account
 
     def _update_date_using_date_format(self, pivot):
