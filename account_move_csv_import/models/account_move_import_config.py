@@ -104,7 +104,10 @@ class AccountMoveImportConfig(models.Model):
         "_sel_int2letter", string="Credit",
         help="For XLSX/XLS/ODS formats, this column must be in number format.")
     col_ref = fields.Selection("_sel_int2letter", string="Reference")
-    col_journal = fields.Selection("_sel_int2letter", string="Journal Code")
+    col_journal = fields.Selection(
+        "_sel_int2letter", string="Journal Code",
+        compute="_compute_col_journal", store=True, precompute=True, readonly=False,
+        )
     col_date = fields.Selection(
         "_sel_int2letter", string="Date",
         help="For XLSX/XLS/ODS formats, this column must be in date format "
@@ -230,6 +233,12 @@ class AccountMoveImportConfig(models.Model):
             config.show_encoding = show_encoding
             config.show_sheet_number = show_sheet_number
             config.show_date_format = show_date_format
+
+    @api.depends("force_journal_id")
+    def _compute_col_journal(self):
+        for config in self:
+            if config.force_journal_id:
+                config.col_journal = False
 
     @api.model
     def _sel_int2letter(self):

@@ -14,8 +14,11 @@
         <field name="col_date">0</field>
         <field name="col_journal">1</field>
         <field name="col_account">2</field>
-        <field name="col_partner">3</field>
-        <field name="col_analytic">4</field>
+	<field name="col_partner">3</field>
+	<!-- I can't set a value for 'col_analytic' because, if analytic is not 
+	enabled, the field will be invisible and it will raise a ValidationError
+	if the user assigns this column to another field -->
+        <field name="col_analytic"></field>
         <field name="col_name">5</field>
         <field name="col_debit">6</field>
         <field name="col_credit">7</field>
