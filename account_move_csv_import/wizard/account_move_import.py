@@ -94,6 +94,7 @@ class AccountMoveImport(models.TransientModel):
     #    'debit': 0,
     #    'ref': '9804',  # optional
     #    'journal': 'VT',  # journal code
+    #    'journal_id': 4,  # when journal is forced
     #    'date': '2025-02-15',  # as datetime or as string in '%Y-%m-%d'
     #    'date_maturity': '2025-03-14',  # same format as 'date'
     #    'move_name': 'OD/2022/1242',  # optional, for 'name' of account.move
@@ -160,8 +161,7 @@ class AccountMoveImport(models.TransientModel):
         force_move_ref = self.force_move_ref
         force_move_line_name = self.force_move_line_name
         config = self.config_id.with_company(self.company_id.id)
-        force_journal_code =\
-            config.force_journal_id and config.force_journal_id.code or False
+        force_journal_id = config.force_journal_id.id or False
         non_str_cols = ['date', 'date_maturity', 'debit', 'credit', 'line']
         for l in pivot:
             for key, value in l.items():
@@ -181,8 +181,8 @@ class AccountMoveImport(models.TransientModel):
                 l['name'] = force_move_line_name
             if force_move_ref:
                 l['ref'] = force_move_ref
-            if force_journal_code:
-                l['journal'] = force_journal_code
+            if force_journal_id:
+                l['journal_id'] = force_journal_id
         # remove lines without account (useful to auto-remove a total line at the end)
         pivot_no_lines_without_account = [l for l in pivot if l.get('account')]
         return pivot_no_lines_without_account
@@ -577,10 +577,11 @@ class AccountMoveImport(models.TransientModel):
                         else:
                             errors['analytic'].setdefault(ana_account_code, []).append(l['line'])
 
-            if l['journal'] in speeddict['journal']:
-                l['journal_id'] = speeddict['journal'][l['journal']]
-            else:
-                errors['journal'].setdefault(l['journal'], []).append(l['line'])
+            if not l.get('journal_id'):
+                if l['journal'] in speeddict['journal']:
+                    l['journal_id'] = speeddict['journal'][l['journal']]
+                else:
+                    errors['journal'].setdefault(l['journal'], []).append(l['line'])
             if not l.get('date'):
                 errors['other'].append(_(
                     'Line %d: missing date.') % l['line'])
