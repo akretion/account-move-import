@@ -86,6 +86,10 @@ class AccountMoveImportConfig(models.Model):
         "Odoo will create a new journal entry when the field 'move_name' "
         "of the pivot format changes (this field is optional, "
         "but it will have to be present if you select this method).")
+    create_partner = fields.Boolean(
+        string="Create Partners",
+        help="Create an inactive partner when a journal item "
+        "has a partner that doesn't match with any existing partner.")
     # COLUMN config
     show_col_config = fields.Boolean(compute="_compute_show")
     col_account = fields.Selection("_sel_int2letter", string="Account Code")

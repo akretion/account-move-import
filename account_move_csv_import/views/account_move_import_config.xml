@@ -64,6 +64,7 @@
                         <field name="skip_null_lines"/>
                         <field name="keep_odoo_move_name"/>
                         <field name="split_move_method"/>
+                        <field name="create_partner" invisible="file_format != 'fec_txt'"/>
                     </group>
                 </group>
                 <group name="columns" string="Columns Configuration" invisible="not show_col_config">
