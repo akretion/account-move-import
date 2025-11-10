@@ -90,6 +90,17 @@ class AccountMoveImportConfig(models.Model):
         string="Create Partners",
         help="Create an inactive partner when a journal item "
         "has a partner that doesn't match with any existing partner.")
+    skip_first_journal = fields.Boolean(
+        string="Skip First Journal",
+        help="This option can be useful for FEC import. If enabled, the journal entries of the first journal found in FEC will not be imported (in FEC, the first journal is always the AN")
+    reconcile_policy = fields.Selection([
+        ('current', 'Within entries of current import only'),
+        ('across', 'Within entries of current and previous imports'),
+        ], default='current')
+    groupby_move_name = fields.Boolean(
+        string="Group By Move Name",
+        help="This option is useful when importing FEC from a software such as "
+        "Quadra where journal items of the same journal entry are not always grouped.")
     # COLUMN config
     show_col_config = fields.Boolean(compute="_compute_show")
     col_account = fields.Selection("_sel_int2letter", string="Account Code")

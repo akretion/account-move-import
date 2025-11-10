@@ -492,12 +492,16 @@ class AccountMoveImport(models.TransientModel):
             "journal": {},
             "account": {},
             "analytic": {},
+            "account_id2rec": {},
+            "account_id2code": {},
             }
         acc_sr = self.env['account.account'].with_company(company_id).search_read([
             ('company_ids', 'in', company_id),
-            ('deprecated', '=', False)], ['code'])
+            ('deprecated', '=', False)], ['code', 'reconcile'])
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
+            speeddict['account_id2rec'][l['id']] = l['reconcile']
+            speeddict['account_id2code'][l['id']] = l['code']
         aacc_sr = self.env['account.analytic.account'].search_read(
             [('company_id', 'in', (company_id, False)), ('code', '!=', False)],
             ['code'])
@@ -536,6 +540,21 @@ class AccountMoveImport(models.TransientModel):
         errors = {'other': []}
         for key in key2label.keys():
             errors[key] = {}
+
+        if config.skip_first_journal:
+            pivot_skip_first_journal = []
+            first_journal_code = False
+            for l in pivot:
+                if not first_journal_code:
+                    first_journal_code = l.get('journal')
+                if first_journal_code == l.get('journal'):
+                    logger.info('Skip line %s in journal %s because option skip_first_journal is enabled', l['line'], l.get('journal'))
+                else:
+                    pivot_skip_first_journal.append(l)
+            pivot = pivot_skip_first_journal
+        if config.groupby_move_name:
+            pivot_groupby_move_name = sorted(pivot, key=lambda to_sort: to_sort['move_name'])
+            pivot = pivot_groupby_move_name
         # MATCHES + CHECKS
         for l in pivot:
             assert l.get('line') and isinstance(l.get('line'), int), \
@@ -561,6 +580,14 @@ class AccountMoveImport(models.TransientModel):
                         break
             if not l.get('account_id'):
                 errors['account'].setdefault(l['account'], []).append(l['line'])
+            else:
+                reconcile = speeddict['account_id2rec'][l['account_id']]
+                if not reconcile and l.get('reconcile_ref'):
+                    logger.info(
+                        'Remove reconcile_ref %s on line %s because account %s '
+                        'is not reconciliable',
+                        l['reconcile_ref'], l['line'], speeddict['account_id2code'][l['account_id']])
+                    l['reconcile_ref'] = False
             if l.get('partner'):
                 if l['partner'] not in speeddict['partner'] and create_partner:
                     partner = rpo.create(self._prepare_new_partner(l, speeddict))
@@ -675,7 +702,7 @@ class AccountMoveImport(models.TransientModel):
             else:
                 raise UserError(_("Wrong Move Split Method."))
             if all(same_move):  # append to current move
-                cur_move['line_ids'].append(Command.create(self._prepare_move_line(l, seq)))
+                cur_move['line_ids'].append(Command.create(self._prepare_move_line(l, seq, speeddict)))
             else:  # new move
                 if cur_move:
                     if len(cur_move['line_ids']) <= 1:
@@ -684,7 +711,7 @@ class AccountMoveImport(models.TransientModel):
                             "Debug data: %s") % (l['line'], cur_move['line_ids']))
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
-                cur_move['line_ids'] = [Command.create(self._prepare_move_line(l, seq))]
+                cur_move['line_ids'] = [Command.create(self._prepare_move_line(l, seq, speeddict))]
                 cur_date = l['date']
                 cur_move_name = move_name
                 cur_journal_id = l['journal_id']
@@ -696,13 +723,16 @@ class AccountMoveImport(models.TransientModel):
             raise UserError(_(
                 "The journal entry that ends on the last line is not "
                 "balanced (balance is %s).") % cur_balance)
-        rmoves = self.env['account.move']
-        for move in moves:
-            rmoves += amo.create(move)
-        logger.info(
-            'Account moves IDs %s created via file import' % rmoves.ids)
+        logger.info('Starting to create %d account moves', len(moves))
+        start = datetime.now()
+        rmoves = amo.create(moves)
+        end = datetime.now()
+        seconds = (end-start).seconds
+        logger.info('%d account moves created in %d seconds', len(rmoves), seconds)
         if post:
+            logger.info('Starting to post %d account moves', len(rmoves))
             rmoves._post(soft=False)
+            logger.info('%d account moves posted', len(rmoves))
         return rmoves
 
     def _prepare_move(self, pivot_line):
@@ -715,7 +745,13 @@ class AccountMoveImport(models.TransientModel):
             vals['name'] = pivot_line['move_name']
         return vals
 
-    def _prepare_move_line(self, pivot_line, sequence):
+    def _prepare_move_line(self, pivot_line, sequence, speeddict):
+        # some software like Quadra consider that a reconcile mark is specific to an account
+        # so I concat the account ID and the reconcile_ref
+        import_reconcile = False
+        if pivot_line.get('reconcile_ref'):
+            account_code = speeddict['account_id2code'][pivot_line['account_id']]
+            import_reconcile = f"{account_code}-{pivot_line['reconcile_ref']}"
         vals = {
             'credit': pivot_line['credit'],
             'debit': pivot_line['debit'],
@@ -724,7 +760,7 @@ class AccountMoveImport(models.TransientModel):
             'account_id': pivot_line['account_id'],
             'analytic_distribution': pivot_line.get('analytic_distribution'),
             'date_maturity': pivot_line.get('date_maturity'),
-            'import_reconcile': pivot_line.get('reconcile_ref'),
+            'import_reconcile': import_reconcile,
             'import_external_id': f"{sequence}-{pivot_line.get('line')}",
             }
         return vals
@@ -732,6 +768,16 @@ class AccountMoveImport(models.TransientModel):
     def _reconcile_move_lines(self, moves):
         comp_cur = self.company_id.currency_id
         logger.info('Start to reconcile imported moves')
+        ml_domain = [
+            ('import_reconcile', '!=', False),
+            ('parent_state', '=', 'posted'),
+            ('account_id.reconcile', '=', True),
+            ('reconciled', '=', False),
+            ]
+        if self.reconcile_policy == 'current':
+            ml_domain.append(('move_id', 'in', moves.ids))
+        lines = self.env['account.move.line'].search(ml_domain)
+        logger.info('%d account move lines with import_reconcile to analyse for reconciliation', len(lines))
         lines = self.env['account.move.line'].search([
             ('move_id', 'in', moves.ids),
             ('import_reconcile', '!=', False),
@@ -766,18 +812,6 @@ class AccountMoveImport(models.TransientModel):
                     "Skip reconcile of ref '%s' because the lines with "
                     "this ref have different accounts (%s)",
                     rec_ref, ', '.join([acc.code for acc in accounts]))
-                continue
-            if not list(accounts)[0].reconcile:
-                logger.warning(
-                    "Skip reconcile of ref '%s' because the account '%s' "
-                    "is not configured with 'Allow Reconciliation'",
-                    rec_ref, list(accounts)[0].display_name)
-                continue
-            if len(partners) > 1:
-                logger.warning(
-                    "Skip reconcile of ref '%s' because the lines with "
-                    "this ref have different partners (IDs %s)",
-                    rec_ref, ', '.join([str(partner_id) for partner_id in partners]))
                 continue
             lines_to_rec.reconcile()
         logger.info('Reconcile imported moves finished')
