@@ -27,4 +27,17 @@
         <!-- other default values are fine, no need to change them -->
     </record>
 
+    <record id="silae_account_move_import_config" model="account.move.import.config">
+        <field name="name">SILAE</field>
+        <field name="sequence">150</field>
+        <field name="file_format">xlsx_xls_ods</field>
+        <field name="col_journal">0</field>
+        <field name="col_date">1</field>
+        <field name="col_account">2</field>
+        <field name="col_analytic">3</field>
+        <field name="col_name">4</field>
+        <field name="col_debit">5</field>
+        <field name="col_credit">6</field>
+    </record>
+
 </odoo>
