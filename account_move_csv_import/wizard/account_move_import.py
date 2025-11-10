@@ -839,10 +839,11 @@ class AccountMoveImport(models.TransientModel):
         logger.info('%d account move lines with import_reconcile to analyse for reconciliation', len(lines))
         torec = {}  # key = reconcile mark, value = movelines_recordset
         for line in lines:
-            if line.import_reconcile in torec:
-                torec[line.import_reconcile] |= line
+            key = (line.import_reconcile, line.account_id.id, line.partner_id.id)
+            if key in torec:
+                torec[key] |= line
             else:
-                torec[line.import_reconcile] = line
+                torec[key] = line
         for rec_ref, lines_to_rec in torec.items():
             if len(lines_to_rec) < 2:
                 logger.warning(
