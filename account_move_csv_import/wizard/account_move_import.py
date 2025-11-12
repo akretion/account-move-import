@@ -778,10 +778,6 @@ class AccountMoveImport(models.TransientModel):
             ml_domain.append(('move_id', 'in', moves.ids))
         lines = self.env['account.move.line'].search(ml_domain)
         logger.info('%d account move lines with import_reconcile to analyse for reconciliation', len(lines))
-        lines = self.env['account.move.line'].search([
-            ('move_id', 'in', moves.ids),
-            ('import_reconcile', '!=', False),
-            ])
         torec = {}  # key = reconcile mark, value = movelines_recordset
         for line in lines:
             if line.import_reconcile in torec:
