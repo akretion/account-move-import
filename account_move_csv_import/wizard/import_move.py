@@ -165,7 +165,7 @@ class AccountMoveImport(models.TransientModel):
         with zipfile.ZipFile(fileobj) as myzip:
             for filename in myzip.namelist():
                 with myzip.open(filename) as myfile:
-                    self.env["ir.attachment"].create(
+                    att = self.env["ir.attachment"].create(
                         {
                             "res_model": "account.move",
                             "res_id": moves.id,
@@ -173,6 +173,8 @@ class AccountMoveImport(models.TransientModel):
                             "datas": base64.b64encode(myfile.read()),
                         }
                     )
+                    if filename.endswith('bogforing_total.pdf'):
+                        att.register_as_main_attachment(force=False)
 
     def update_pivot(self, pivot):
         force_move_date = self.force_move_date
