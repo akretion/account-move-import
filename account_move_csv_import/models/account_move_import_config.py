@@ -90,6 +90,10 @@ class AccountMoveImportConfig(models.Model):
         string="Create Partners",
         help="Create an inactive partner when a journal item "
         "has a partner that doesn't match with any existing partner.")
+    create_account = fields.Boolean(
+        string="Create Account",
+        help="Create an account when a journal item "
+        "has an account that doesn't match with any existing account.")
     skip_first_journal = fields.Boolean(
         string="Skip First Journal",
         help="This option can be useful for FEC import. If enabled, the journal entries of the first journal found in FEC will not be imported (in FEC, the first journal is always the AN")
