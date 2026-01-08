@@ -774,7 +774,7 @@ class AccountMoveImport(models.TransientModel):
             ('account_id.reconcile', '=', True),
             ('reconciled', '=', False),
             ]
-        if self.reconcile_policy == 'current':
+        if self.config_id.reconcile_policy == 'current':
             ml_domain.append(('move_id', 'in', moves.ids))
         lines = self.env['account.move.line'].search(ml_domain)
         logger.info('%d account move lines with import_reconcile to analyse for reconciliation', len(lines))
