@@ -215,7 +215,7 @@ class AccountMoveImport(models.TransientModel):
             'move_name',      # EcritureNum
             'date',           # EcritureDate
             'account',        # CompteNum
-            False,            # CompteLib
+            'account_name',   # CompteLib
             'partner_ref',    # CompAuxNum
             'partner_name',   # CompAuxLib
             'ref',            # PieceRef
@@ -260,6 +260,7 @@ class AccountMoveImport(models.TransientModel):
                     'journal': l['journal'],
                     'move_name': l['move_name'],
                     'account': l['account'],
+                    'account_name': l['account_name'],
                     'partner': l['partner_ref'],
                     'partner_name': l['partner_name'],
                     'credit': float(l['credit'].replace(',', '.')),
@@ -530,6 +531,7 @@ class AccountMoveImport(models.TransientModel):
         company_id = self.company_id.id
         config = self.config_id
         create_partner = config.create_partner
+        create_account = config.create_account
         speeddict = self._prepare_speeddict(company_id)
         key2label = {
             'journal': _('journal codes'),
@@ -579,7 +581,30 @@ class AccountMoveImport(models.TransientModel):
                         l['account_id'] = account_id
                         break
             if not l.get('account_id'):
-                errors['account'].setdefault(l['account'], []).append(l['line'])
+                # Avoid creation of 512 as it may require quite some config (bank
+                # journal...)
+                if create_account and l.get("account_name") and not l.get("account").startswith("512"):
+                    acc_code_tmp = l['account']
+                    if l["account"].startswith("6") or l["account"].startswith("7"):
+                        short_acc_code = l["account"][0:1]
+                    else:
+                        short_acc_code = l['account'][0:3]
+                    similar_account = self.env["account.account"].search([("code", '=ilike', f"{short_acc_code}%")], limit=1)
+                    if similar_account:
+                        new_acc = self.env["account.account"].create({
+                            "name": l["account_name"],
+                            "code": l["account"],
+                            "reconcile": similar_account.reconcile,
+                            "account_type": similar_account.account_type,
+                        })
+                        l["account_id"] = new_acc.id
+                        speeddict['account'][l["account"]] = new_acc.id
+                        speeddict['account_id2rec'][new_acc.id] = new_acc.reconcile
+                        speeddict['account_id2code'][new_acc.id] = new_acc.code
+                    else:
+                        errors['account'].setdefault(l['account'], []).append(l['line'])
+                else:
+                    errors['account'].setdefault(l['account'], []).append(l['line'])
             else:
                 reconcile = speeddict['account_id2rec'][l['account_id']]
                 if not reconcile and l.get('reconcile_ref'):
