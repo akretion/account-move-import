@@ -64,7 +64,7 @@
                         <field name="skip_null_lines"/>
                         <field name="keep_odoo_move_name"/>
                         <field name="split_move_method"/>
-                        <field name="create_partner" invisible="file_format != 'fec_txt'"/>
+                        <field name="create_partner"/>
                         <field name="skip_first_journal" invisible="file_format != 'fec_txt'"/>
                         <field name="reconcile_policy" invisible="file_format != 'fec_txt'"/>
                         <field name="groupby_move_name" invisible="file_format != 'fec_txt'"/>
