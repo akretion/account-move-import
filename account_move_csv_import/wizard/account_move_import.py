@@ -343,7 +343,7 @@ class AccountMoveImport(models.TransientModel):
         return pivot
 
     def _xlsx2pivot(self, fileobj):
-        wb = openpyxl.load_workbook(fileobj.name, read_only=True)
+        wb = openpyxl.load_workbook(fileobj.name, read_only=True, data_only=True)
         config = self.config_id
         sheet = wb.worksheets[config.sheet_number - 1]
         pfield2position = config._get_pfield2position()
