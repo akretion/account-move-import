@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2025 Akretion France (https://www.akretion.com/)
+  @author: Alexis de Lattre <alexis.delattre@akretion.com>
+  License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
+-->
+
+<odoo noupdate="1">
+
+    <record id="payfit_account_move_import_config" model="account.move.import.config">
+        <field name="name">Payfit CSV</field>
+        <field name="sequence">10</field>
+        <field name="file_format">csv</field>
+
+        <!-- CSV Configuration -->
+        <field name="encoding">utf-8</field>
+        <field name="delimiter">;</field>
+        <field name="decimal_separator">.</field>
+        <field name="quoting">minimal</field>
+        <field name="date_format">%d/%m/%Y</field>
+        <field name="start_line">2</field>
+
+        <!-- Column Mapping (0-indexed) - Format Payfit 2025 -->
+        <!-- A: EcritureDate -->
+        <field name="col_date">0</field>
+        <!-- B: CompteNum -->
+        <field name="col_account">1</field>
+        <!-- C: CompteLib -->
+        <field name="col_name">2</field>
+        <!-- D: EmployeLib (ignored, no mapping) -->
+        <!-- E: Debit -->
+        <field name="col_debit">4</field>
+        <!-- F: Credit -->
+        <field name="col_credit">5</field>
+
+        <!-- Advanced Configuration -->
+        <field name="split_move_method">balanced</field>
+        <field name="skip_null_lines" eval="True"/>
+        <field name="default_post_move" eval="False"/>
+        <field name="create_account" eval="True"/>
+
+    </record>
+
+</odoo>
