@@ -496,8 +496,7 @@ class AccountMoveImport(models.TransientModel):
             "account_id2code": {},
             }
         acc_sr = self.env['account.account'].with_company(company_id).search_read([
-            ('company_ids', 'in', company_id),
-            ('deprecated', '=', False)], ['code', 'reconcile'])
+            ('company_ids', 'in', company_id)], ['code', 'reconcile'])
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
             speeddict['account_id2rec'][l['id']] = l['reconcile']
@@ -623,10 +622,14 @@ class AccountMoveImport(models.TransientModel):
                             errors['analytic'].setdefault(ana_account_code, []).append(l['line'])
 
             if not l.get('journal_id'):
-                if l['journal'] in speeddict['journal']:
-                    l['journal_id'] = speeddict['journal'][l['journal']]
+                if l.get('journal'):
+                    if l['journal'] in speeddict['journal']:
+                        l['journal_id'] = speeddict['journal'][l['journal']]
+                    else:
+                        errors['journal'].setdefault(l['journal'], []).append(l['line'])
                 else:
-                    errors['journal'].setdefault(l['journal'], []).append(l['line'])
+                    errors['other'].append(_(
+                        'Line %d: missing journal (please select a journal in the wizard).') % l['line'])
             if not l.get('date'):
                 errors['other'].append(_(
                     'Line %d: missing date.') % l['line'])
