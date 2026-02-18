@@ -244,7 +244,8 @@ class AccountMoveImport(models.TransientModel):
                 l['credit'] = 0.0
             if not l['debit']:
                 l['debit'] = 0.0
-                l['amount_currency'] *= -1
+                if l.get('amount_currency'):
+                    l['amount_currency'] *= -1
 
     def extenso2pivot(self, fileobj):
         fieldnames = [
