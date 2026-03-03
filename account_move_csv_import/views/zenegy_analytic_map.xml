@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2026 Stein & Gabelgaard ApS
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+
+<odoo>
+
+    <record id="zenegy_analytic_map_form_view" model="ir.ui.view">
+        <field name="model">zenegy.analytic.map</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <!-- TODO -->
+                </header>
+                <sheet>
+                    <!-- TODO -->
+                    <group>
+                        <field name="name"/>
+                        <field name="analytic_account_id" options="{'color_field': 'color'}"/>
+                        <field name="analytic_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                    </group>
+                </sheet>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="zenegy_analytic_map_search_view" model="ir.ui.view">
+        <field name="model">zenegy.analytic.map</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="analytic_account_id"/>
+                <field name="analytic_tag_ids"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="zenegy_analytic_map_tree_view" model="ir.ui.view">
+        <field name="model">zenegy.analytic.map</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="analytic_account_id" options="{'color_field': 'color'}"/>
+                <field name="analytic_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="zenegy_analytic_map_act_window" model="ir.actions.act_window">
+        <field name="name">Zenegy Analytic Map</field> <!-- TODO -->
+        <field name="res_model">zenegy.analytic.map</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <record id="zenegy_analytic_map_menu" model="ir.ui.menu">
+        <field name="name">Zenegy Analytic Map</field>
+        <field name="parent_id" ref="account_move_import_conf_menu"/>
+        <field name="action" ref="zenegy_analytic_map_act_window"/>
+        <field name="sequence" eval="100"/>
+    </record>
+
+</odoo>

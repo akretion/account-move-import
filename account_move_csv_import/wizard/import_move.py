@@ -386,7 +386,7 @@ class AccountMoveImport(models.TransientModel):
         elif line1.startswith(u'Lønkørsels-ID;Periode fra;Periode til;Dispositionsdato;Afdelingsnavn;Konto;Tekst;Debet;Kredit'):
             fileobj.seek(0)
         elif not line1.startswith('sep=;'):
-            raise UserError(_("This is not a Zenergy Payroll file."))
+            raise UserError(_("This is not a Zenegy Payroll file."))
         reader = unicodecsv.DictReader(
             fileobj,
             delimiter=';',
@@ -420,9 +420,19 @@ class AccountMoveImport(models.TransientModel):
                     'ref': u'Løn #%s: %s %s - %s' % (l[loen_id_key], l['Afdelingsnavn'], l['Periode fra'], l['Periode til'])
                 }
                 if l['Afdelingsnavn']:
-                    analytic = aa.search([('name', '=', l['Afdelingsnavn'])])
-                    if analytic:
-                        vals['analytic_account_id'] = analytic.id
+                    zenegy_map = self.env['zenegy.analytic.map'].search([('name', '=', l['Afdelingsnavn'])], limit=1)
+                    if zenegy_map:
+                        vals['analytic_account_id'] = zenegy_map.analytic_account_id.id
+                        if zenegy_map.analytic_tag_ids:
+                            vals['analytic_tag_ids'] = [(6, 0, zenegy_map.analytic_tag_ids.ids)]
+                    else:
+                        analytic = aa.search([('name', '=', l['Afdelingsnavn'])])
+                        if analytic:
+                            vals['analytic_account_id'] = analytic.id
+                        self.env['zenegy.analytic.map'].create({
+                            'name': l['Afdelingsnavn'],
+                            'analytic_account_id': analytic.id if analytic else False,
+                        })
                 logger.info('VALS: %s', vals)
                 res.append(vals)
                 if credit2:
