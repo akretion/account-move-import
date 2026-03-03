@@ -51,8 +51,6 @@ Added by Stein & Gabelgaard ApS
         ],
     'external_dependencies': {'python': ['unicodecsv', 'xlrd']},
     'data': [
-        'security/zenegy_analytic_map.xml',
-        'views/zenegy_analytic_map.xml',
         'security/account_move_import_col_map.xml',
         'views/account_move_import_col_map.xml',
         'security/account_move_import_map_item.xml',
@@ -61,6 +59,8 @@ Added by Stein & Gabelgaard ApS
         'views/account_move_import_map.xml',
         'wizard/import_move_view.xml',
         'security/import_move_wizard.xml',
+        'security/zenegy_analytic_map.xml',
+        'views/zenegy_analytic_map.xml',
     ],
     'installable': True,
 }
