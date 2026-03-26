@@ -92,9 +92,7 @@ class AccountMoveImportConfig(models.Model):
         "has a partner that doesn't match with any existing partner.")
     create_account = fields.Boolean(
         string="Create Accounts",
-        help="Create accounts when a journal item references an account "
-        "that doesn't exist. The account will be created based on the "
-        "French chart of accounts structure.")
+        help="Automatically create accounts that don't exist in Odoo.")
     skip_first_journal = fields.Boolean(
         string="Skip First Journal",
         help="This option can be useful for FEC import. If enabled, the journal entries of the first journal found in FEC will not be imported (in FEC, the first journal is always the AN")

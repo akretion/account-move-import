@@ -2,7 +2,7 @@
 # @author Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models, Command, _
+from odoo import api, fields, models, Command
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 from datetime import datetime, date as datelib
@@ -114,9 +114,9 @@ class AccountMoveImport(models.TransientModel):
         method_name = f"_{file_format}2pivot"
         if not hasattr(self, method_name):
             raise UserError(
-                _(
-                    "Method '%s' doesn't exist. This should never happen.") % method_name
-                )
+                self.env._(
+                    "Method '%s' doesn't exist. This should never happen.", method_name
+                ))
         method = getattr(self, method_name)
         pivot = method(fileobj, file_bytes)
         return pivot
@@ -124,7 +124,7 @@ class AccountMoveImport(models.TransientModel):
     def run_import(self):
         self.ensure_one()
         if not self.file_to_import:
-            raise UserError(_("You must upload a file to import."))
+            raise UserError(self.env._("You must upload a file to import."))
         suffix = ''
         if self.filename:
             suffix = self.filename.split('.')[-1]
@@ -136,7 +136,7 @@ class AccountMoveImport(models.TransientModel):
             pivot = self._file2pivot(fileobj, file_bytes)
         logger.debug('pivot before update: %s', pivot)
         pivot = self._update_pivot(pivot)
-        moves = self._create_moves_from_pivot(pivot, post=self.post_move)
+        moves, created_account_codes = self._create_moves_from_pivot(pivot, post=self.post_move)
         if self.post_move:
             self._reconcile_move_lines(moves)
         action = self.env["ir.actions.actions"]._for_xml_id(
@@ -148,13 +148,26 @@ class AccountMoveImport(models.TransientModel):
                 'view_mode': 'form,list',
                 'res_id': moves[0].id,
                 'view_id': False,
-                'views': False,
+                'views': [(False, "form")],
                 })
         else:
             action.update({
-                'view_mode': 'list,form',
                 'domain': [('id', 'in', moves.ids)],
                 })
+        if created_account_codes:
+            action = {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'type': 'warning',
+                    'sticky': True,
+                    'title': self.env._("%s account(s) created", len(created_account_codes)),
+                    'message': self.env._(
+                        "The following accounts have been automatically created: %s.",
+                        ", ".join([str(code) for code in created_account_codes])),
+                    "next": action,
+                    },
+                }
         return action
 
     def _update_pivot(self, pivot):
@@ -191,8 +204,8 @@ class AccountMoveImport(models.TransientModel):
     def _update_date_using_date_format(self, pivot):
         date_format = self.config_id.date_format
         field2label = {
-            'date': _('Date'),
-            'date_maturity': _('Due Date'),
+            'date': self.env._('Date'),
+            'date_maturity': self.env._('Due Date'),
             }
         for vals in pivot:
             for key, field_label in field2label.items():
@@ -200,7 +213,7 @@ class AccountMoveImport(models.TransientModel):
                     try:
                         vals[key] = datetime.strptime(vals[key], date_format)
                     except Exception:
-                        raise UserError(_(
+                        raise UserError(self.env._(
                             "Parsing error on line %(line)s for field '%(field_label)s': "
                             "'%(date)s' does not match date format '%(date_format)s'.",
                             line=vals['line'],
@@ -234,7 +247,7 @@ class AccountMoveImport(models.TransientModel):
             first_line = fileobj.readline().decode()
             dialect = csv.Sniffer().sniff(first_line, delimiters="|\t")
         except Exception:
-            raise UserError(_(
+            raise UserError(self.env._(
                 "Could not detect the field delimited. Please check that "
                 "file '%(filename)s' it is a text FEC file.",
                 filename=self.filename))
@@ -318,7 +331,7 @@ class AccountMoveImport(models.TransientModel):
                                     try:
                                         vals[pfield] = float(vals[pfield])
                                     except Exception as err:
-                                        raise UserError(_(
+                                        raise UserError(self.env._(
                                             "Float parsing error on line %(line)s: '%(value)s' "
                                             "could not be converted to a float. Error: %(err)s",
                                             value=vals[pfield],
@@ -338,7 +351,8 @@ class AccountMoveImport(models.TransientModel):
         elif mime_res == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':  # XLSX
             pivot = self._xlsx2pivot(fileobj)
         else:
-            raise UserError(_("The file '%s' is not an XLSX, XLS nor ODS file.") % self.filename)
+            raise UserError(self.env._(
+                "The file '%s' is not an XLSX, XLS nor ODS file.", self.filename))
         self._update_date_using_date_format(pivot)
         return pivot
 
@@ -405,7 +419,7 @@ class AccountMoveImport(models.TransientModel):
 
     def _ods2pivot(self, fileobj):
         if odsparsator is None:
-            raise UserError(_(
+            raise UserError(self.env._(
                 "To import ods files, you must install the odsparsator python library. "
                 "See https://pypi.org/project/odsparsator"))
         config = self.config_id
@@ -525,48 +539,13 @@ class AccountMoveImport(models.TransientModel):
 
     def _prepare_new_account(self, account_code, account_name, company_id):
         """Prepare values for creating a new account.
-
-        Try to find a parent account (shorter code with same prefix) and use its type.
-        If no parent found, use French PCG defaults.
+        Fields 'account_type' and 'reconcile' are computed fields and
+        the native code works fine to compute them
         """
-        aao = self.env['account.account']
-
-        # Try to find a parent account by reducing the code length
-        parent_account = False
-        for i in range(len(account_code) - 1, 0, -1):
-            parent_code = account_code[:i]
-            parent_account = aao.search([
-                ('code', '=', parent_code),
-                ('company_ids', 'in', company_id)
-            ], limit=1)
-            if parent_account:
-                break
-
-        # Use parent account type and reconcile settings if found
-        if parent_account:
-            account_type = parent_account.account_type
-            reconcile = parent_account.reconcile
-        else:
-            # Fallback to French PCG defaults based on first digit
-            account_type_map = {
-                '1': 'equity',           # Capitaux
-                '2': 'asset_non_current', # Immobilisations
-                '3': 'asset_current',     # Stocks
-                '4': 'liability_current', # Tiers (Clients 41, Fournisseurs 40, Sociales 43, Fiscales 44, Associés 45)
-                '5': 'asset_current',     # Financiers
-                '6': 'expense',           # Charges
-                '7': 'income',            # Produits
-                }
-            first_digit = account_code[0] if account_code else '0'
-            account_type = account_type_map.get(first_digit, 'asset_current')
-            reconcile = first_digit in ('4', '5')
-
         vals = {
             'code': account_code,
             'name': account_name or account_code,
-            'account_type': account_type,
-            'reconcile': reconcile,
-            'company_ids': [(4, company_id)],
+            'company_ids': [Command.set([company_id])],
             }
         return vals
 
@@ -581,12 +560,13 @@ class AccountMoveImport(models.TransientModel):
         create_account = config.create_account
         speeddict = self._prepare_speeddict(company_id)
         key2label = {
-            'journal': _('journal codes'),
-            'account': _('account codes'),
-            'partner': _('partner reference'),
-            'analytic': _('analytic codes'),
+            'journal': self.env._('journal codes'),
+            'account': self.env._('account codes'),
+            'partner': self.env._('partner reference'),
+            'analytic': self.env._('analytic codes'),
             }
         errors = {'other': []}
+        created_account_codes = []
         for key in key2label.keys():
             errors[key] = {}
 
@@ -632,11 +612,13 @@ class AccountMoveImport(models.TransientModel):
                     # Create the account automatically
                     account = aao.create(self._prepare_new_account(
                         l['account'], l.get('name'), company_id))
-                    logger.info('Account %s (%s) created', account.code, account.name)
+                    account = account.with_company(company_id)
+                    logger.info('Account %s created', account.display_name)
                     speeddict['account'][l['account'].upper()] = account.id
                     speeddict['account_id2rec'][account.id] = account.reconcile
                     speeddict['account_id2code'][account.id] = account.code
                     l['account_id'] = account.id
+                    created_account_codes.append(account.code)
                 else:
                     errors['account'].setdefault(l['account'], []).append(l['line'])
             else:
@@ -687,43 +669,45 @@ class AccountMoveImport(models.TransientModel):
                 else:
                     errors['journal'].setdefault(l['journal'], []).append(l['line'])
             if not l.get('date'):
-                errors['other'].append(_(
-                    'Line %d: missing date.') % l['line'])
+                errors['other'].append(self.env._(
+                    'Line %d: missing date.', l['line']))
             else:
                 if not isinstance(l.get('date'), datelib):
                     try:
                         l['date'] = datetime.strptime(l['date'], '%Y-%m-%d')
                     except Exception:
-                        errors['other'].append(_(
-                            "Line %d: field 'Date' has an invalid date '%s'") % (l['line'], l['date']))
+                        errors['other'].append(self.env._(
+                            "Line %(line)s: field 'Date' has an invalid date '%(date)s'",
+                            line=l['line'], date=l['date']))
             if l.get('date_maturity'):
                 if not isinstance(l.get('date_maturity'), datelib):
                     try:
                         l['date_maturity'] = datetime.strptime(l['date_maturity'], '%Y-%m-%d')
                     except Exception:
-                        errors['other'].append(_(
-                            "Line %d: field 'Due Date' has an invalid date '%s'") % (l['line'], l['date_maturity']))
+                        errors['other'].append(self.env._(
+                            "Line %(line)s: field 'Due Date' has an invalid date '%(date)s'",
+                            line=l['line'], date=l['date_maturity']))
             if not isinstance(l.get('credit'), (float, int)):
-                errors['other'].append(_(
-                    'Line %d: bad value for credit (%s).')
-                    % (l['line'], l['credit']))
+                errors['other'].append(self.env._(
+                    'Line %(line)s: bad value for credit (%(credit)s).',
+                    line=l['line'], credit=l['credit']))
             if not isinstance(l.get('debit'), (float, int)):
-                errors['other'].append(_(
-                    'Line %d: bad value for debit (%s).')
-                    % (l['line'], l['debit']))
+                errors['other'].append(self.env._(
+                    'Line %(line)s: bad value for debit (%(debit)s).',
+                    line=l['line'], debit=l['debit']))
             # test that they don't have both a value
         # LIST OF ERRORS
         msg = ''
         for key, label in key2label.items():
             if errors[key]:
                 errors_key_sorted = sorted(errors[key].items(), key=lambda x: x[0])
-                msg += _("List of %s that don't exist in Odoo:\n%s\n\n") % (
-                    label,
-                    '\n'.join([
+                msg += self.env._("List of %(label)s that don't exist in Odoo:\n%(err)s\n\n",
+                    label=label,
+                    err='\n'.join([
                         '- %s : line(s) %s' % (code, ', '.join([str(i) for i in lines]))
                         for (code, lines) in errors_key_sorted]))
         if errors['other']:
-            msg += _('List of misc errors:\n%s') % (
+            msg += self.env._('List of misc errors:\n%s',
                 '\n'.join(['- %s' % e for e in errors['other']]))
         if msg:
             raise UserError(msg)
@@ -749,8 +733,8 @@ class AccountMoveImport(models.TransientModel):
             move_name = l.get('move_name')
             if split_move_method == 'move_name':
                 if not move_name:
-                    errors['other'].append(_(
-                        'Line %d: missing journal entry number.') % l['line'])
+                    errors['other'].append(self.env._(
+                        'Line %s: missing journal entry number.', l['line']))
                 same_move = [cur_move_name == move_name]
             elif split_move_method == 'balanced':
                 same_move = [
@@ -759,15 +743,15 @@ class AccountMoveImport(models.TransientModel):
                 if not date_by_move_line:
                     same_move.append(cur_date == l['date'])
             else:
-                raise UserError(_("Wrong Move Split Method."))
+                raise UserError(self.env._("Wrong Move Split Method."))
             if all(same_move):  # append to current move
                 cur_move['line_ids'].append(Command.create(self._prepare_move_line(l, seq, speeddict)))
             else:  # new move
                 if cur_move:
                     if len(cur_move['line_ids']) <= 1:
-                        raise UserError(_(
-                            "Journal entry on line %d only has 1 line.\n\n"
-                            "Debug data: %s") % (l['line'], cur_move['line_ids']))
+                        raise UserError(self.env._(
+                            "Journal entry on line %(line)s only has 1 line.\n\n"
+                            "Debug data: %(debug)s", line=l['line'], debug=cur_move['line_ids']))
                     moves.append(cur_move)
                 cur_move = self._prepare_move(l)
                 cur_move['line_ids'] = [Command.create(self._prepare_move_line(l, seq, speeddict))]
@@ -779,9 +763,9 @@ class AccountMoveImport(models.TransientModel):
         if cur_move:
             moves.append(cur_move)
         if not comp_cur.is_zero(cur_balance):
-            raise UserError(_(
+            raise UserError(self.env._(
                 "The journal entry that ends on the last line is not "
-                "balanced (balance is %s).") % cur_balance)
+                "balanced (balance is %s).", cur_balance))
         logger.info('Starting to create %d account moves', len(moves))
         start = datetime.now()
         rmoves = amo.create(moves)
@@ -792,7 +776,7 @@ class AccountMoveImport(models.TransientModel):
             logger.info('Starting to post %d account moves', len(rmoves))
             rmoves._post(soft=False)
             logger.info('%d account moves posted', len(rmoves))
-        return rmoves
+        return rmoves, created_account_codes
 
     def _prepare_move(self, pivot_line):
         vals = {
