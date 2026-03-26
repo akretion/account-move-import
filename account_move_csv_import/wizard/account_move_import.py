@@ -523,13 +523,62 @@ class AccountMoveImport(models.TransientModel):
             }
         return vals
 
+    def _prepare_new_account(self, account_code, account_name, company_id):
+        """Prepare values for creating a new account.
+
+        Try to find a parent account (shorter code with same prefix) and use its type.
+        If no parent found, use French PCG defaults.
+        """
+        aao = self.env['account.account']
+
+        # Try to find a parent account by reducing the code length
+        parent_account = False
+        for i in range(len(account_code) - 1, 0, -1):
+            parent_code = account_code[:i]
+            parent_account = aao.search([
+                ('code', '=', parent_code),
+                ('company_ids', 'in', company_id)
+            ], limit=1)
+            if parent_account:
+                break
+
+        # Use parent account type and reconcile settings if found
+        if parent_account:
+            account_type = parent_account.account_type
+            reconcile = parent_account.reconcile
+        else:
+            # Fallback to French PCG defaults based on first digit
+            account_type_map = {
+                '1': 'equity',           # Capitaux
+                '2': 'asset_non_current', # Immobilisations
+                '3': 'asset_current',     # Stocks
+                '4': 'liability_current', # Tiers (Clients 41, Fournisseurs 40, Sociales 43, Fiscales 44, Associés 45)
+                '5': 'asset_current',     # Financiers
+                '6': 'expense',           # Charges
+                '7': 'income',            # Produits
+                }
+            first_digit = account_code[0] if account_code else '0'
+            account_type = account_type_map.get(first_digit, 'asset_current')
+            reconcile = first_digit in ('4', '5')
+
+        vals = {
+            'code': account_code,
+            'name': account_name or account_code,
+            'account_type': account_type,
+            'reconcile': reconcile,
+            'company_ids': [(4, company_id)],
+            }
+        return vals
+
     def _create_moves_from_pivot(self, pivot, post=False):
         logger.debug('Final pivot: %s', pivot)
         amo = self.env['account.move']
         rpo = self.env['res.partner']
+        aao = self.env['account.account']
         company_id = self.company_id.id
         config = self.config_id
         create_partner = config.create_partner
+        create_account = config.create_account
         speeddict = self._prepare_speeddict(company_id)
         key2label = {
             'journal': _('journal codes'),
@@ -579,7 +628,17 @@ class AccountMoveImport(models.TransientModel):
                         l['account_id'] = account_id
                         break
             if not l.get('account_id'):
-                errors['account'].setdefault(l['account'], []).append(l['line'])
+                if create_account and l.get('account'):
+                    # Create the account automatically
+                    account = aao.create(self._prepare_new_account(
+                        l['account'], l.get('name'), company_id))
+                    logger.info('Account %s (%s) created', account.code, account.name)
+                    speeddict['account'][l['account'].upper()] = account.id
+                    speeddict['account_id2rec'][account.id] = account.reconcile
+                    speeddict['account_id2code'][account.id] = account.code
+                    l['account_id'] = account.id
+                else:
+                    errors['account'].setdefault(l['account'], []).append(l['line'])
             else:
                 reconcile = speeddict['account_id2rec'][l['account_id']]
                 if not reconcile and l.get('reconcile_ref'):
