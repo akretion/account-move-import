@@ -228,7 +228,7 @@ class AccountMoveImport(models.TransientModel):
             'move_name',      # EcritureNum
             'date',           # EcritureDate
             'account',        # CompteNum
-            False,            # CompteLib
+            'account_name',   # CompteLib
             'partner_ref',    # CompAuxNum
             'partner_name',   # CompAuxLib
             'ref',            # PieceRef
@@ -273,6 +273,7 @@ class AccountMoveImport(models.TransientModel):
                     'journal': l['journal'],
                     'move_name': l['move_name'],
                     'account': l['account'],
+                    'account_name': l['account_name'],
                     'partner': l['partner_ref'],
                     'partner_name': l['partner_name'],
                     'credit': float(l['credit'].replace(',', '.')),
@@ -609,9 +610,10 @@ class AccountMoveImport(models.TransientModel):
                         break
             if not l.get('account_id'):
                 if create_account and l.get('account'):
+                    account_name = l.get("account_name") or l.get("name")
                     # Create the account automatically
                     account = aao.create(self._prepare_new_account(
-                        l['account'], l.get('name'), company_id))
+                        l['account'], account_name, company_id))
                     account = account.with_company(company_id)
                     logger.info('Account %s created', account.display_name)
                     speeddict['account'][l['account'].upper()] = account.id
