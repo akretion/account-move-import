@@ -397,7 +397,7 @@ class AccountMoveImport(models.TransientModel):
                 'date': row[0].value,
                 'journal': row[1].value,
                 'account': str(row[2].value),
-                'partner': row[3].value or False,
+                'partner': row[3].value and str(row[3].value) or False,
                 'analytic': row[4].value or False,
                 'name': row[5].value,
                 'debit': row[6].value,
