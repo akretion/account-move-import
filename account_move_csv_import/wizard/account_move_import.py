@@ -513,7 +513,7 @@ class AccountMoveImport(models.TransientModel):
             }
         acc_sr = self.env['account.account'].with_company(company_id).search_read([
             ('company_ids', 'in', company_id),
-            ('deprecated', '=', False)], ['code', 'reconcile'])
+            ], ['code', 'reconcile'])
         for l in acc_sr:
             speeddict['account'][l['code'].upper()] = l['id']
             speeddict['account_id2rec'][l['id']] = l['reconcile']

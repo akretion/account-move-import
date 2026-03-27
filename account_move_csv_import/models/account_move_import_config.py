@@ -192,23 +192,18 @@ class AccountMoveImportConfig(models.Model):
         required=True,
     )
 
-    _sql_constraints = [
-        (
-            "name_company_uniq",
-            "unique(name, company_id)",
-            "An import configuration already exists with the same name.",
-        ),
-        (
-            "start_line_positive",
-            "CHECK(start_line > 0)",
-            "The start line must be strictly positive.",
-        ),
-        (
-            "sheet_number_positive",
-            "CHECK(sheet_number > 0)",
-            "The sheet number must be strictly positive.",
-        ),
-    ]
+    _name_company_uniq = models.UniqueIndex(
+        "(name, company_id)",
+        "An import configuration already exists with the same name.",
+        )
+    _start_line_positive = models.Constraint(
+        "CHECK(start_line > 0)",
+        "The start line must be strictly positive.",
+        )
+    _sheet_number_positive = models.Constraint(
+        "CHECK(sheet_number > 0)",
+        "The sheet number must be strictly positive.",
+        )
 
     def _get_file_format_info(self):
         res = {
