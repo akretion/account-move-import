@@ -50,6 +50,7 @@
         <field name="decimal_separator">.</field>
         <field name="quoting">minimal</field>
         <field name="date_format">%d/%m/%Y</field>
+        <field name="force_journal_id" model="account.journal" search="[('type', '=', 'general')]"/>
         <field name="skip_null_lines" eval="True"/>
         <field name="start_line">2</field>
         <!-- Column Mapping (0-indexed) - Format Payfit 2025 -->
