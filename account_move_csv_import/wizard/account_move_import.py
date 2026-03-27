@@ -6,6 +6,7 @@ from odoo import api, fields, models, Command
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 from datetime import datetime, date as datelib
+from markupsafe import Markup
 import csv
 import re
 from tempfile import NamedTemporaryFile
@@ -615,6 +616,9 @@ class AccountMoveImport(models.TransientModel):
                     account = aao.create(self._prepare_new_account(
                         l['account'], account_name, company_id))
                     account = account.with_company(company_id)
+                    account.message_post(body=Markup(self.env._(
+                        "Account auto-created by the wizard "
+                        "<strong>Import Journal Entries</strong>.")))
                     logger.info('Account %s created', account.display_name)
                     speeddict['account'][l['account'].upper()] = account.id
                     speeddict['account_id2rec'][account.id] = account.reconcile
