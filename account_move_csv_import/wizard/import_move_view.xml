@@ -20,6 +20,7 @@
                 <field name="file_encoding" attrs="{'invisible': [('file_format', 'not in', ('fec_txt', 'quadra'))], 'required': [('file_format', 'in', ('fec_txt', 'quadra'))]}"/>
                 <field name="company_id" groups="base.group_multi_company"/>
                 <field name="post_move" />
+                <field name="include_date_maturity" attrs="{'invisible': [('file_format', 'not in', ('genericxlsx', 'genericcsv'))]}"/>
                 <field name="force_journal_id" attrs="{'required': [('force_journal_required', '=', True)]}"/>
                 <field name="force_move_date" attrs="{'required': [('force_move_date_required', '=', True)]}"/>
                 <field name="force_move_ref" />
@@ -56,6 +57,7 @@
                         <li>Ref (used as Journal Entry Ref)</li>
                         <li>Reconcile ref (used for reconciliation after import)</li>
                         <li>Journal entry number</li>
+                        <li>Date Maturity (DD/MM/YYYY or configurable)</li>
                         </ol></li>
                     <li><em>Encoding</em>: UTF-8</li>
                     <li><em>Field separator</em>: auto-detected</li>
@@ -78,6 +80,7 @@
                     J. Reconcile Ref (used for reconciliation after import)<br/>
                     K. Analytic Tags (separated by coma)<br/>
                     L. Journal Entry Number<br/>
+                    M. Date Maturity (DD/MM/YYYY or configurable)<br/>
                 </p>
             </div>
 

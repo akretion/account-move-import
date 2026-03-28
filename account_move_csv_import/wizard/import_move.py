@@ -87,6 +87,7 @@ class AccountMoveImport(models.TransientModel):
     file_with_header = fields.Boolean(
         string='Has Header Line',
         help="Indicate if the first line is a header line and should be ignored.")
+    include_date_maturity = fields.Boolean('Include Date Maturity')
 
     @api.onchange('file_format')
     def file_format_change(self):
@@ -332,7 +333,7 @@ class AccountMoveImport(models.TransientModel):
         fieldnames = [
             'date', 'journal', 'account', 'partner',
             'analytic', 'name', 'debit', 'credit',
-            'ref', 'reconcile_ref', 'move_name',
+            'ref', 'reconcile_ref', 'move_name', 'date_maturity',
             ]
         first_line = fileobj.readline().decode()
         dialect = unicodecsv.Sniffer().sniff(first_line)
@@ -359,7 +360,19 @@ class AccountMoveImport(models.TransientModel):
                 raise UserError(_(
                     "Date parsing error: '%s' in line %s does not match "
                     "date format '%s'.") % (date_str, i, self.date_format))
-
+            if self.include_date_maturity:
+                date_maturity_str = l['date_maturity']
+                if date_maturity_str:
+                    try:
+                        date_maturity = datetime.strptime(date_maturity_str, self.date_format)
+                    except ValueError:
+                        raise UserError(_(
+                            "Date Maturity parsing error: '%s' in line %s does not match "
+                            "date format '%s'.") % (date_maturity_str, i, self.date_format))
+                else:
+                    date_maturity = False
+            else:
+                date_maturity = False
             vals = {
                 'journal': l['journal'],
                 'account': l['account'],
@@ -370,6 +383,7 @@ class AccountMoveImport(models.TransientModel):
                 'ref': l.get('ref', ''),
                 'reconcile_ref': l.get('reconcile_ref', ''),
                 'move_name': l.get('move_name', ''),
+                'date_maturity': date_maturity,
                 'line': i,
                 }
             if l['analytic']:
@@ -393,6 +407,10 @@ class AccountMoveImport(models.TransientModel):
             if not [item for item in row if item.value]:
                 # skip empty line
                 continue
+            if self.include_date_maturity:
+                date_maturity = row[12].value
+            else:
+                date_maturity = False
             vals = {
                 'date': row[0].value,
                 'journal': row[1].value,
@@ -406,6 +424,7 @@ class AccountMoveImport(models.TransientModel):
                 'reconcile_ref': len(row) > 9 and row[9].value or '',
                 'analytic_tags': len(row) > 10 and row[10].value or '',
                 'move_name': len(row) > 11 and row[11].value or '',
+                'date_maturity': date_maturity,
                 'line': i,
                 }
             res.append(vals)
@@ -769,6 +788,10 @@ class AccountMoveImport(models.TransientModel):
             'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': '%s-%s' % (sequence, pivot_line.get('line')),
             }
+        # Adding date_maturity only if it exists in pivot_line
+        # This validation is temporary as date_maturity implementation is currently for CSV and XLSX file types only
+        if 'date_maturity' in pivot_line:
+            vals['date_maturity'] = pivot_line['date_maturity']
         return vals
 
     def reconcile_move_lines(self, moves):
