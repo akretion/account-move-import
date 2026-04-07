@@ -759,6 +759,10 @@ class AccountMoveImport(models.TransientModel):
                             "Journal entry on line %(line)s only has 1 line.\n\n"
                             "Debug data: %(debug)s", line=l['line'], debug=cur_move['line_ids']))
                     moves.append(cur_move)
+                if not comp_cur.is_zero(cur_balance):
+                    raise UserError(self.env._(
+                        "Journal entry on line %(line)s is not balanced.",
+                        line=l['line'] -1))
                 cur_move = self._prepare_move(l)
                 cur_move['line_ids'] = [Command.create(self._prepare_move_line(l, seq, speeddict))]
                 cur_date = l['date']
