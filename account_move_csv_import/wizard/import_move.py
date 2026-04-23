@@ -527,12 +527,12 @@ class AccountMoveImport(models.TransientModel):
                 'line': i,
                 }
             res.append(vals)
-            
+        return res
+
     def cpt195txt2pivot(self, fileobj):
         res = []
         i = 0
-        file_content = base64.decodebytes(self.file_to_import)
-        file_content = file_content.decode("latin1")
+        file_content = fileobj.read().decode("latin1")
         file_lines = file_content[:-4].split("\r\n")
         for line in file_lines:
             i += 1
@@ -544,13 +544,14 @@ class AccountMoveImport(models.TransientModel):
                 continue
             vals = {
                 'journal': line[16:19],
+                'adp_code': line[140:145],
                 'account': line[24:36],
-                "analytic": line[36:43] != "9999999" and line[36:43],
+                'analytic': line[36:43] != "9999999" and line[36:43],
                 'date': datelib(
                     year=int(line[158:160] + line[14:16]),
                     month=int(line[12:14]),
                     day=int(line[22:24]),
-                    ),
+                ),
                 'name': line[80:100],
                 'ref': line[140:143],
                 'line': i,
@@ -736,6 +737,8 @@ class AccountMoveImport(models.TransientModel):
         comp_cur = self.company_id.currency_id
         seq = self.env['ir.sequence'].next_by_code('account.move.import')
         cur_move = {}
+        if self.split_move_method == 'balanced':
+            pivot.sort(key=lambda x: (x['journal'], x.get('date')))
         for l in pivot:
             if (
                     skip_null_lines and
