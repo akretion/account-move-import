@@ -5,6 +5,7 @@
 from odoo import api, fields, models, Command
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
+from psycopg2 import IntegrityError
 from datetime import datetime, date as datelib
 from markupsafe import Markup
 import csv
@@ -561,6 +562,9 @@ class AccountMoveImport(models.TransientModel):
         create_partner = config.create_partner
         create_account = config.create_account
         speeddict = self._prepare_speeddict(company_id)
+
+        print("speeddict", speeddict["partner"].get("SOLFontgombaultPetrusaStella", {}))
+
         key2label = {
             'journal': self.env._('journal codes'),
             'account': self.env._('account codes'),
@@ -636,12 +640,18 @@ class AccountMoveImport(models.TransientModel):
                         l['reconcile_ref'], l['line'], speeddict['account_id2code'][l['account_id']])
                     l['reconcile_ref'] = False
             if l.get('partner'):
-                if l['partner'] not in speeddict['partner'] and create_partner:
-                    partner = rpo.create(self._prepare_new_partner(l, speeddict))
+                partner_ref = l['partner'].upper()
+                if partner_ref not in speeddict['partner'] and create_partner:
+                    try:
+                        partner = rpo.create(self._prepare_new_partner(l, speeddict))
+                    except IntegrityError as e:
+                        # in case of ORM 'duplicate key value violates unique constrain' error,
+                        # we show the user a more explicit error
+                        raise UserError("[Line %s] %s" % (l["line"], e))
                     logger.info('Partner %s reference %s created', partner.display_name, l['partner'])
-                    speeddict['partner'][l['partner']] = partner.id
-                if l['partner'] in speeddict['partner']:
-                    l['partner_id'] = speeddict['partner'][l['partner']]
+                    speeddict['partner'][partner_ref] = partner.id
+                if partner_ref in speeddict['partner']:
+                    l['partner_id'] = speeddict['partner'][partner_ref]
                 else:
                     errors['partner'].setdefault(l['partner'], []).append(l['line'])
             if l.get('analytic'):
