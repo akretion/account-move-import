@@ -537,6 +537,7 @@ class AccountMoveImport(models.TransientModel):
             'active': False,
             'ref': pivot_entry['partner'],
             'comment': 'Partner automatically created by journal entry import.',
+            "company_id": self.company_id.id,
             }
         return vals
 
