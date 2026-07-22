@@ -562,9 +562,6 @@ class AccountMoveImport(models.TransientModel):
         create_partner = config.create_partner
         create_account = config.create_account
         speeddict = self._prepare_speeddict(company_id)
-
-        print("speeddict", speeddict["partner"].get("SOLFontgombaultPetrusaStella", {}))
-
         key2label = {
             'journal': self.env._('journal codes'),
             'account': self.env._('account codes'),
