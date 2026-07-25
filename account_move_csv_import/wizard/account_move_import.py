@@ -198,6 +198,14 @@ class AccountMoveImport(models.TransientModel):
                 l['ref'] = force_move_ref
             if force_journal_id:
                 l['journal_id'] = force_journal_id
+            # some software like Quadra consider that a reconcile mark is specific to an account
+            # so I concat the account code and the reconcile_ref
+            # If you remap 401xxx to 401000, you should make sure the remap is made
+            # after this code (for example, in an inherit of _update_pivot() where
+            # you FIRST call super() and then write the specific code)
+            if l.get('reconcile_ref'):
+                l['reconcile_ref'] = f"{l['account']}-{l['reconcile_ref']}"
+
         # remove lines without account (useful to auto-remove a total line at the end)
         pivot_no_lines_without_account = [l for l in pivot if l.get('account')]
         return pivot_no_lines_without_account
@@ -795,12 +803,6 @@ class AccountMoveImport(models.TransientModel):
         return vals
 
     def _prepare_move_line(self, pivot_line, sequence, speeddict):
-        # some software like Quadra consider that a reconcile mark is specific to an account
-        # so I concat the account ID and the reconcile_ref
-        import_reconcile = False
-        if pivot_line.get('reconcile_ref'):
-            account_code = speeddict['account_id2code'][pivot_line['account_id']]
-            import_reconcile = f"{account_code}-{pivot_line['reconcile_ref']}"
         vals = {
             'credit': pivot_line['credit'],
             'debit': pivot_line['debit'],
@@ -809,7 +811,7 @@ class AccountMoveImport(models.TransientModel):
             'account_id': pivot_line['account_id'],
             'analytic_distribution': pivot_line.get('analytic_distribution'),
             'date_maturity': pivot_line.get('date_maturity'),
-            'import_reconcile': import_reconcile,
+            'import_reconcile': pivot_line.get('reconcile_ref'),
             'import_external_id': f"{sequence}-{pivot_line.get('line')}",
             }
         return vals
